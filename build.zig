@@ -20,7 +20,7 @@ pub fn build(b: *std.Build) void {
             .root_module = ui_module,
             .linkage = if (is_dynamic) .dynamic else .static,
         });
-    lib.linkLibC();
+    lib.root_module.link_libc = true;
     lib.addIncludePath(b.path("common"));
     lib.installHeader(b.path("ui.h"), "ui.h");
     lib.root_module.addCMacro("libui_EXPORTS", "");
