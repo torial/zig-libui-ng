@@ -21,10 +21,10 @@ pub fn build(b: *std.Build) void {
             .linkage = if (is_dynamic) .dynamic else .static,
         });
     lib.root_module.link_libc = true;
-    lib.addIncludePath(b.path("common"));
+    lib.root_module.addIncludePath(b.path("common"));
     lib.installHeader(b.path("ui.h"), "ui.h");
     lib.root_module.addCMacro("libui_EXPORTS", "");
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .files = &libui_common_sources,
         .flags = &.{},
     });
@@ -32,11 +32,11 @@ pub fn build(b: *std.Build) void {
     if (target.result.isDarwinLibC()) {
         // use darwin/*.m backend
         lib.installHeader(b.path("ui_darwin.h"), "ui_darwin.h");
-        lib.addIncludePath(b.path("darwin"));
-        lib.linkFramework("Foundation");
-        lib.linkFramework("Appkit");
-        lib.addSystemIncludePath(b.path("Cocoa"));
-        lib.addCSourceFiles(.{
+        lib.root_module.addIncludePath(b.path("darwin"));
+        lib.root_module.linkFramework("Foundation", .{});
+        lib.root_module.linkFramework("Appkit", .{});
+        lib.root_module.addSystemIncludePath(b.path("Cocoa"));
+        lib.root_module.addCSourceFiles(.{
             .files = &libui_darwin_sources,
             .flags = &.{},
         });
@@ -44,41 +44,41 @@ pub fn build(b: *std.Build) void {
         // use windows/*.cpp backend
         lib.installHeader(b.path("ui_windows.h"), "ui_windows.h");
         lib.subsystem = .Windows;
-        lib.addIncludePath(b.path("windows"));
-        lib.linkSystemLibrary("user32");
-        lib.linkSystemLibrary("kernel32");
-        lib.linkSystemLibrary("gdi32");
-        lib.linkSystemLibrary("comctl32");
-        lib.linkSystemLibrary("uxtheme");
-        lib.linkSystemLibrary("msimg32");
-        lib.linkSystemLibrary("comdlg32");
-        lib.linkSystemLibrary("d2d1");
-        lib.linkSystemLibrary("dwrite");
-        lib.linkSystemLibrary("ole32");
-        lib.linkSystemLibrary("oleaut32");
-        lib.linkSystemLibrary("oleacc");
-        lib.linkSystemLibrary("uuid");
-        lib.linkSystemLibrary("windowscodecs");
-        lib.linkLibCpp();
+        lib.root_module.addIncludePath(b.path("windows"));
+        lib.root_module.linkSystemLibrary("user32", .{});
+        lib.root_module.linkSystemLibrary("kernel32", .{});
+        lib.root_module.linkSystemLibrary("gdi32", .{});
+        lib.root_module.linkSystemLibrary("comctl32", .{});
+        lib.root_module.linkSystemLibrary("uxtheme", .{});
+        lib.root_module.linkSystemLibrary("msimg32", .{});
+        lib.root_module.linkSystemLibrary("comdlg32", .{});
+        lib.root_module.linkSystemLibrary("d2d1", .{});
+        lib.root_module.linkSystemLibrary("dwrite", .{});
+        lib.root_module.linkSystemLibrary("ole32", .{});
+        lib.root_module.linkSystemLibrary("oleaut32", .{});
+        lib.root_module.linkSystemLibrary("oleacc", .{});
+        lib.root_module.linkSystemLibrary("uuid", .{});
+        lib.root_module.linkSystemLibrary("windowscodecs", .{});
+        lib.root_module.link_libcpp = true;
 
         // Compile
         if (is_dynamic) {
-            lib.addWin32ResourceFile(.{
+            lib.root_module.addWin32ResourceFile(.{
                 .file = b.path("windows/resources.rc"),
                 .flags = &.{},
             });
         }
 
-        lib.addCSourceFiles(.{
+        lib.root_module.addCSourceFiles(.{
             .files = &libui_windows_sources,
             .flags = if (is_dynamic) &.{} else &.{"-D_UI_STATIC"},
         });
     } else {
         // assume unix/*.c backend
         lib.installHeader(b.path("ui_unix.h"), "ui_unix.h");
-        lib.linkSystemLibrary("gtk+-3.0");
-        lib.addIncludePath(b.path("unix"));
-        lib.addCSourceFiles(.{
+        lib.root_module.linkSystemLibrary("gtk+-3.0", .{});
+        lib.root_module.addIncludePath(b.path("unix"));
+        lib.root_module.addCSourceFiles(.{
             .files = &libui_unix_sources,
             .flags = &.{},
         });
@@ -116,7 +116,7 @@ pub fn build(b: *std.Build) void {
             .root_module = module,
         });
         if (target.result.os.tag == .windows) {
-            exe.addWin32ResourceFile(.{
+            exe.root_module.addWin32ResourceFile(.{
                 .file = b.path("examples/resources.rc"),
                 .flags = if (is_dynamic) &.{} else &.{ "/d", "_UI_STATIC" },
             });
