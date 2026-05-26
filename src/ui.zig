@@ -573,6 +573,8 @@ pub const Entry = opaque {
     pub extern fn uiEntryOnChanged(e: *Entry, f: ?*const fn (*Entry, ?*anyopaque) callconv(.c) void, data: ?*anyopaque) void;
     pub extern fn uiEntryReadOnly(e: *Entry) c_int;
     pub extern fn uiEntrySetReadOnly(e: *Entry, readonly: c_int) void;
+    pub extern fn uiEntryPlaceholder(e: *Entry) [*:0]u8;
+    pub extern fn uiEntrySetPlaceholder(e: *Entry, text: [*:0]const u8) void;
     pub extern fn uiNewEntry() ?*Entry;
     pub extern fn uiNewPasswordEntry() ?*Entry;
     pub extern fn uiNewSearchEntry() ?*Entry;
@@ -643,12 +645,18 @@ pub const Tab = opaque {
     pub extern fn uiTabNumPages(t: *Tab) c_int;
     pub extern fn uiTabMargined(t: *Tab, index: c_int) c_int;
     pub extern fn uiTabSetMargined(t: *Tab, index: c_int, margined: c_int) void;
+    pub extern fn uiTabSelected(t: *Tab) c_int;
+    pub extern fn uiTabSetSelected(t: *Tab, index: c_int) void;
+    pub extern fn uiTabOnSelected(t: *Tab, f: ?*const fn (*Tab, ?*anyopaque) callconv(.c) void, data: ?*anyopaque) void;
     pub extern fn uiNewTab() ?*Tab;
 
     pub const Append = uiTabAppend;
     pub const InsertAt = uiTabInsertAt;
     pub const Delete = uiTabDelete;
     pub const NumPages = uiTabNumPages;
+    pub const Selected = uiTabSelected;
+    pub const SetSelected = uiTabSetSelected;
+    pub const OnSelected = uiTabOnSelected;
 
     pub fn Margined(t: *Tab, index: c_int) bool {
         return uiTabMargined(t, index) == 1;
@@ -876,6 +884,8 @@ pub const EditableCombobox = opaque {
     pub extern fn uiEditableComboboxText(c: *EditableCombobox) [*:0]const u8;
     pub extern fn uiEditableComboboxSetText(c: *EditableCombobox, text: [*:0]const u8) void;
     pub extern fn uiEditableComboboxOnChanged(c: *EditableCombobox, f: ?*const fn (?*EditableCombobox, ?*anyopaque) callconv(.c) void, data: ?*anyopaque) void;
+    pub extern fn uiEditableComboboxPlaceholder(c: *EditableCombobox) [*:0]u8;
+    pub extern fn uiEditableComboboxSetPlaceholder(c: *EditableCombobox, text: [*:0]const u8) void;
     pub extern fn uiNewEditableCombobox() ?*EditableCombobox;
 
     pub const Append = uiEditableComboboxAppend;
@@ -1279,10 +1289,18 @@ pub const Draw = opaque {
         pub extern fn uiDrawStroke(c: *Draw.Context, path: *Draw.Path, b: *Draw.Brush, p: *Draw.StrokeParams) void;
         pub extern fn uiDrawFill(c: *Draw.Context, path: *Draw.Path, b: *Draw.Brush) void;
         pub extern fn uiDrawText(c: *Draw.Context, tl: *Draw.TextLayout, x: f64, y: f64) void;
+        pub extern fn uiDrawTransform(c: *Draw.Context, m: *Draw.Matrix) void;
+        pub extern fn uiDrawClip(c: *Draw.Context, path: *Draw.Path) void;
+        pub extern fn uiDrawSave(c: *Draw.Context) void;
+        pub extern fn uiDrawRestore(c: *Draw.Context) void;
 
         pub const Stroke = uiDrawStroke;
         pub const Fill = uiDrawFill;
         pub const Text = uiDrawText;
+        pub const Transform = uiDrawTransform;
+        pub const Clip = uiDrawClip;
+        pub const Save = uiDrawSave;
+        pub const Restore = uiDrawRestore;
     };
     pub const Params = extern struct {
         Context: ?*Context,
@@ -1818,12 +1836,16 @@ pub const Grid = opaque {
 
     pub extern fn uiGridAppend(g: *Grid, c: ?*Control, left: c_int, top: c_int, xspan: c_int, yspan: c_int, hexpand: c_int, halign: Grid.Align, vexpand: c_int, valign: Grid.Align) void;
     pub extern fn uiGridInsertAt(g: *Grid, c: ?*Control, existing: *Control, at: Grid.At, xspan: c_int, yspan: c_int, hexpand: c_int, halign: Grid.Align, vexpand: c_int, valign: Grid.Align) void;
+    pub extern fn uiGridDelete(g: *Grid, c: *Control) void;
+    pub extern fn uiGridNumChildren(g: *Grid) c_int;
     pub extern fn uiGridPadded(g: *Grid) c_int;
     pub extern fn uiGridSetPadded(g: *Grid, padded: c_int) void;
     pub extern fn uiNewGrid() ?*Grid;
 
     pub const Append = uiGridAppend;
     pub const InsertAt = uiGridInsertAt;
+    pub const Delete = uiGridDelete;
+    pub const NumChildren = uiGridNumChildren;
     pub fn Padded(g: *Grid) bool {
         return uiGridPadded(g) == 1;
     }

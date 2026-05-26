@@ -5,8 +5,9 @@
     .paths = .{""},
     .dependencies = .{
         .libui = .{
-            .url = "git+https://github.com/torial/libui-ng?ref=wp-2025#5c24fd6621a45bb8bb326b9f1facad5336613711",
-            .hash = "N-V-__8AAEujJQCHCZIDKlQ1fg9j03MUEN1w3FPRW4g0HojW",
+            // wp-2025-v2: kojix2/main (111 bug fixes) + our C extensions + libui-dev extras
+            .url = "git+https://github.com/torial/libui-ng?ref=wp-2025-v2#33472b7896d34fe1ec76a6607a6ec37e8e6cb7aa",
+            .hash = "N-V-__8AAMdxJgCeWSS6VEqnS3OX2zo0O9Q3A3eY0WJOsYDj",
         },
     },
 }
