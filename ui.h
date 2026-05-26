@@ -1124,13 +1124,45 @@ typedef struct uiSpinbox uiSpinbox;
 #define uiSpinbox(this) ((uiSpinbox *) (this))
 
 /**
- * Returns the spinbox value.
+ * Returns the spinbox value as an integer.
  *
  * @param s uiSpinbox instance.
  * @returns Spinbox value.
  * @memberof uiSpinbox
  */
 _UI_EXTERN int uiSpinboxValue(uiSpinbox *s);
+
+
+/**
+ * Returns the spinbox value as a double-precision floating point number.
+ *
+ * @param s uiSpinbox instance.
+ * @returns Spinbox value.
+ * @memberof uiSpinbox
+ */
+_UI_EXTERN double uiSpinboxValueDouble(uiSpinbox *s);
+
+/**
+ * Returns the spinbox value as a string.
+ *
+ * @param s uiSpinbox instance.
+ * @returns The text of the spinbox's entry.
+ *          A `NUL` terminated string.\n
+ *          Caller is responsible for freeing the data with `uiFreeText()`.
+ * @memberof uiSpinbox
+ */
+_UI_EXTERN char* uiSpinboxValueText(uiSpinbox *s);
+
+/**
+ * Returns the spinbox value as a string.
+ *
+ * @param s uiSpinbox instance.
+ * @returns The text of the spinbox's entry.
+ *          A `NUL` terminated string.\n
+ *          Caller is responsible for freeing the data with `uiFreeText()`.
+ * @memberof uiSpinbox
+ */
+_UI_EXTERN char* uiSpinboxValueText(uiSpinbox *s);
 
 /**
  * Sets the spinbox value.
@@ -1141,6 +1173,16 @@ _UI_EXTERN int uiSpinboxValue(uiSpinbox *s);
  * @memberof uiSpinbox
  */
 _UI_EXTERN void uiSpinboxSetValue(uiSpinbox *s, int value);
+
+/**
+ * Sets the spinbox value.
+ *
+ * @param s uiSpinbox instance.
+ * @param value Value to set.
+ * @note Setting a value out of range will clamp to the nearest value in range.
+ * @memberof uiSpinbox
+ */
+_UI_EXTERN void uiSpinboxSetValueDouble(uiSpinbox *s, double value);
 
 /**
  * Registers a callback for when the spinbox value is changed by the user.
@@ -1173,6 +1215,23 @@ _UI_EXTERN void uiSpinboxOnChanged(uiSpinbox *s,
  * @memberof uiSpinbox @static
  */
 _UI_EXTERN uiSpinbox *uiNewSpinbox(int min, int max);
+
+/**
+ * Creates a new spinbox.
+ *
+ * The initial spinbox value equals the minimum value.
+ *
+ * In the current implementation @p min and @p max are swapped if `min>max`.
+ * This may change in the future though. See TODO.
+ *
+ * @param min Minimum value.
+ * @param max Maximum value.
+ * @param precision Allowed number of digits for value.
+ * @returns A new uiSpinbox instance.
+ * @todo complain or disallow min>max?
+ * @memberof uiSpinbox @static
+ */
+_UI_EXTERN uiSpinbox *uiNewSpinboxDouble(double min, double max, int precision);
 
 
 /**
@@ -1960,6 +2019,54 @@ _UI_EXTERN void uiMenuAppendSeparator(uiMenu *m);
  */
 _UI_EXTERN uiMenu *uiNewMenu(const char *name);
 
+/**
+ * File Filter struct to be passed to uiOpenFileWithParams(), uiOpenFolderWithParams(), and uiSaveFileWithParams().
+ *
+ * @struct uiFileDialogParams
+ * @ingroup dataEntry dialogWindow
+ */
+typedef struct uiFileDialogParamsFilter uiFileDialogParamsFilter;
+struct uiFileDialogParamsFilter {
+	/**
+	 * The string presented to the user describing the filter.
+	 */
+	const char *name;
+	/**
+	 * The number of patterns pointed to by patterns. Must be greater than 0.
+	 */
+	size_t patternCount;
+	/**
+	 * Used to match filenames in file dialogs.
+	 */
+	const char **patterns;
+};
+
+/**
+ * File Dialog parameters passed to uiOpenFileWithParams(), uiOpenFolderWithParams(), and uiSaveFileWithParams().
+ *
+ * @struct uiFileDialogParams
+ * @ingroup dataEntry dialogWindow
+ */
+typedef struct uiFileDialogParams uiFileDialogParams;
+struct uiFileDialogParams {
+	/**
+	 * String with default folder path to open in. Set to `NULL` to use the default.
+	 */
+	const char* defaultPath;
+	/**
+	 * String with default file name to suggest. Set to `NULL` to use the default.
+	 */
+	const char* defaultName;
+
+	/**
+	 * The number of filters pointed to by filters. If filters is `NULL`, this must be 0.
+	 */
+	size_t filterCount;
+	/**
+	 * Pointer to list of file filters. Set to `NULL` to use the default.
+	 */
+	const uiFileDialogParamsFilter* filters;
+};
 
 /**
  * File chooser dialog window to select a single file.
@@ -1975,6 +2082,20 @@ _UI_EXTERN uiMenu *uiNewMenu(const char *name);
 _UI_EXTERN char *uiOpenFile(uiWindow *parent);
 
 /**
+ * File chooser dialog window to select a single file.
+ *
+ * @param parent Parent window.
+ * @param params Parameters for open file dialog.
+ * @returns File path, `NULL` on cancel.\n
+ *          If path is not `NULL`:\n
+ *          TODO: clarify string encoding.
+ *          Caller is responsible for freeing the data with `uiFreeText()`.
+ * @note File paths are separated by the underlying OS file path separator.
+ * @ingroup dataEntry dialogWindow
+ */
+_UI_EXTERN char *uiOpenFileWithParams(uiWindow *parent, uiFileDialogParams *params);
+
+/**
  * Folder chooser dialog window to select a single folder.
  *
  * @param parent Parent window.
@@ -1986,6 +2107,20 @@ _UI_EXTERN char *uiOpenFile(uiWindow *parent);
  * @ingroup dataEntry dialogWindow
  */
 _UI_EXTERN char *uiOpenFolder(uiWindow *parent);
+
+/**
+ * Folder chooser dialog window to select a single folder.
+ *
+ * @param parent Parent window.
+ * @param params Parameters for open folder dialog.
+ * @returns Folder path, `NULL` on cancel.\n
+ *          If path is not `NULL`:\n
+ *          TODO: clarify string encoding.
+ *          Caller is responsible for freeing the data with `uiFreeText()`.
+ * @note File paths are separated by the underlying OS file path separator.
+ * @ingroup dataEntry dialogWindow
+ */
+_UI_EXTERN char *uiOpenFolderWithParams(uiWindow *parent, uiFileDialogParams *params);
 
 /**
  * Save file dialog window.
@@ -2002,6 +2137,23 @@ _UI_EXTERN char *uiOpenFolder(uiWindow *parent);
  * @ingroup dataEntry dialogWindow
  */
 _UI_EXTERN char *uiSaveFile(uiWindow *parent);
+
+/**
+ * Save file dialog window.
+ *
+ * The user is asked to confirm overwriting existing files, should the chosen
+ * file path already exist on the system.
+ *
+ * @param parent Parent window.
+ * @param params Parameters for dialog.
+ * @returns File path, `NULL` on cancel.\n
+ *          If path is not `NULL`:\n
+ *          TODO: clarify string encoding.
+ *          Caller is responsible for freeing the data with `uiFreeText()`.
+ * @note File paths are separated by the underlying OS file path separator.
+ * @ingroup dataEntry dialogWindow
+ */
+_UI_EXTERN char *uiSaveFileWithParams(uiWindow *parent, uiFileDialogParams *params);
 
 /**
  * Message box dialog window.

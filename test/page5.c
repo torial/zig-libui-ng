@@ -42,6 +42,60 @@ static void saveFile(uiButton *b, void *data)
 	}
 }
 
+static void openFileWithParams(uiButton *b, void *data)
+{
+	char *fn;
+	uiFileDialogParams fparams;
+
+	fparams.filterCount = 2;
+	fparams.filters = (uiFileDialogParamsFilter[]){
+	{"DS ROM (*.nds)", 1, (const char *[]){"*.nds"}},
+	{"Any File", 1, (const char *[]){"*.*"}},
+	};
+
+	fn = uiOpenFileWithParams(parent, &fparams);
+	if (fn == NULL)
+		uiLabelSetText(uiLabel(data), "(cancelled)");
+	else {
+		uiLabelSetText(uiLabel(data), fn);
+		uiFreeText(fn);
+	}
+}
+
+static void openFolderWithParams(uiButton *b, void *data)
+{
+	char *fn;
+
+	fn = uiOpenFolderWithParams(parent, NULL);
+	if (fn == NULL)
+		uiLabelSetText(uiLabel(data), "(cancelled)");
+	else {
+		uiLabelSetText(uiLabel(data), fn);
+		uiFreeText(fn);
+	}
+}
+
+static void saveFileWithParams(uiButton *b, void *data)
+{
+	char *fn;
+	uiFileDialogParams fparams;
+
+	fparams.defaultPath = NULL;
+	fparams.defaultName = "untitled";
+	fparams.filterCount = 1;
+	fparams.filters = (uiFileDialogParamsFilter[]){
+	{"melonDS savestate (*.mln)", 1, (const char *[]){"*.mln"}},
+	};
+
+	fn = uiSaveFileWithParams(parent, &fparams);
+	if (fn == NULL)
+		uiLabelSetText(uiLabel(data), "(cancelled)");
+	else {
+		uiLabelSetText(uiLabel(data), fn);
+		uiFreeText(fn);
+	}
+}
+
 static uiEntry *title, *description;
 
 static void msgBox(uiButton *b, void *data)
@@ -101,6 +155,9 @@ uiBox *makePage5(uiWindow *pw)
 	D("Open File", openFile);
 	D("Open Folder", openFolder);
 	D("Save File", saveFile);
+	D("Open File (Advanced)", openFileWithParams);
+	D("Open Folder with Params", openFolderWithParams);
+	D("Save File with Params", saveFileWithParams);
 
 	title = uiNewEntry();
 	uiEntrySetText(title, "Title");

@@ -70,6 +70,27 @@ char *uiSaveFile(uiWindow *parent)
 	return runSavePanel(windowWindow(parent), s);
 }
 
+char *uiOpenFileWithParams(uiWindow *parent, uiFileDialogParams *params)
+{
+	// TODO
+	uiprivImplBug("Not yet implemented.");
+	return NULL;
+}
+
+char *uiOpenFolderWithParams(uiWindow *parent, uiFileDialogParams *params)
+{
+	// TODO
+	uiprivImplBug("Not yet implemented.");
+	return NULL;
+}
+
+char *uiSaveFileWithParams(uiWindow *parent, uiFileDialogParams *params)
+{
+	// TODO
+	uiprivImplBug("Not yet implemented.");
+	return NULL;
+}
+
 // I would use a completion handler for NSAlert as well, but alas NSAlert's are 10.9 and higher only
 @interface libuiCodeModalAlertPanel : NSObject {
 	NSAlert *panel;
