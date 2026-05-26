@@ -7,6 +7,7 @@ struct uiEntry {
 	void (*onChanged)(uiEntry *, void *);
 	void *onChangedData;
 	BOOL inhibitChanged;
+	int placeholderLen;
 };
 
 static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
@@ -89,6 +90,16 @@ void uiEntrySetReadOnly(uiEntry *e, int readonly)
 {
 	if (Edit_SetReadOnly(e->hwnd, readonly) == 0)
 		logLastError(L"error setting uiEntry read-only state");
+}
+
+char *uiEntryPlaceholder(uiEntry *e)
+{
+	return uiprivEntryPlaceholder(e->hwnd, e->placeholderLen);
+}
+
+void uiEntrySetPlaceholder(uiEntry *e, const char *text)
+{
+	e->placeholderLen = uiprivSetEntryPlaceholder(e->hwnd, text);
 }
 
 static uiEntry *finishNewEntry(DWORD style)

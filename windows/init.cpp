@@ -54,6 +54,11 @@ uiInitOptions uiprivOptions;
 
 const char *uiInit(uiInitOptions *o)
 {
+	uiInitOptions defaults;
+	if (o == NULL) {
+		memset(&defaults, 0, sizeof defaults);
+		o = &defaults;
+	}
 	STARTUPINFOW si;
 	const char *ce;
 	HICON hDefaultIcon;

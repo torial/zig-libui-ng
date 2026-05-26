@@ -113,6 +113,11 @@ uiInitOptions uiprivOptions;
 
 const char *uiInit(uiInitOptions *o)
 {
+	uiInitOptions defaults;
+	if (o == NULL) {
+		memset(&defaults, 0, sizeof defaults);
+		o = &defaults;
+	}
 	@autoreleasepool {
 		uiprivOptions = *o;
 		app = [[uiprivApplicationClass sharedApplication] retain];

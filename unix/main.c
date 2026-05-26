@@ -7,9 +7,14 @@ static GHashTable *timers;
 
 const char *uiInit(uiInitOptions *o)
 {
+	uiInitOptions defaults;
 	GError *err = NULL;
 	const char *msg;
 
+	if (o == NULL) {
+		memset(&defaults, 0, sizeof defaults);
+		o = &defaults;
+	}
 	uiprivOptions = *o;
 	if (gtk_init_with_args(NULL, NULL, NULL, NULL, NULL, &err) == FALSE) {
 		msg = g_strdup(err->message);
