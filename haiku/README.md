@@ -46,9 +46,10 @@ touching the BeAPI's C++ directly — which is the hard part for most people.
   `uiSaveFile` (BFilePanel, made synchronous; see notes)
 - `uiTable` + `uiTableModel` (BColumnListView) — text columns and image columns (BBitmapColumn) fully
   (model-backed rows, row insert/change/delete, selection, row clicked/double-clicked, column widths,
-  selection mode). Progress-bar and checkbox columns render natively (custom `BColumn` `DrawField`),
-  display-only for now; button columns still render as text. Interactive cell toggling/clicking and
-  inline editing are follow-ups.
+  selection mode). Progress-bar, checkbox, and button columns render natively via custom `BColumn`
+  subclasses; checkbox and button columns are **interactive** (`BColumn::MouseDown` + `SetWantsEvents`)
+  — a checkbox click toggles the cell through the model's `SetCellValue`, a button click fires it with
+  `NULL`. Inline text-cell editing is still a follow-up.
 - `uiImage` (BBitmap) — `uiNewImage`/`uiImageAppend` (RGBA → BGRA), used by image table columns
 - `uiArea` + the vector drawing API — a custom-drawn BView whose `Draw` calls the handler, plus
   `uiDrawPath` (BShape; lines, beziers, rectangles, flattened arcs), `uiDrawFill` (solid + linear/
@@ -70,11 +71,10 @@ Eight demos build and run: `haiku/test/hello.c` (minimal window + label + button
 paragraph, aligned lines). All display correct native UI. See the build/run steps below.
 
 **Every libui control constructor is implemented**, as is `uiArea` drawing (vector + text), `uiImage`,
-and rich table columns (image/progress/checkbox). What remains is depth: **interactive** table cells
-(checkbox toggle, button-column clicks) and inline cell editing; per-run text attributes in
-`uiDrawText` (color/weight/size spans, underline); and a proper Unicode grapheme breaker for
-complex-script text. (Image brushes are not exposed by libui's `uiDrawBrush` struct, so there's
-nothing to implement there.)
+and rich table columns (image/progress/checkbox/button, with interactive checkbox + button cells).
+What remains is depth: inline text-cell editing; per-run text attributes in `uiDrawText`
+(color/weight/size spans, underline); and a proper Unicode grapheme breaker for complex-script text.
+(Image brushes are not exposed by libui's `uiDrawBrush` struct, so there's nothing to implement there.)
 
 ### Menus and dialogs — notes
 

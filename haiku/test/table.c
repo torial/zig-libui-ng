@@ -3,8 +3,8 @@
 #include <string.h>
 #include "../../ui.h"
 
-// Column 0 = image, 1-3 = text, 4 = int (progress), 5 = int (checkbox).
-#define NCOLS 6
+// Column 0 = image, 1-3 = text, 4 = int (progress), 5 = int (checkbox), 6 = string (button).
+#define NCOLS 7
 
 static const char *rowdata[][3] = {
 	{ "Alice",   "Engineering", "Active" },
@@ -16,7 +16,7 @@ static const char *rowdata[][3] = {
 #define NROWS ((int) (sizeof rowdata / sizeof rowdata[0]))
 
 static const int loadPct[NROWS] = { 100, 60, 0, 80, 45 };
-static const int doneFlag[NROWS] = { 1, 1, 0, 1, 0 };
+static int doneFlag[NROWS] = { 1, 1, 0, 1, 0 };	// writable: toggled by the checkbox column
 
 static uiImage *swatches[NROWS];
 
@@ -65,13 +65,21 @@ static uiTableValue *modelCellValue(uiTableModelHandler *mh, uiTableModel *m, in
 		return uiNewTableValueInt(loadPct[row]);
 	if (column == 5)
 		return uiNewTableValueInt(doneFlag[row]);
+	if (column == 6)
+		return uiNewTableValueString("Ping");
 	return uiNewTableValueString(rowdata[row][column - 1]);
 }
 
 static void modelSetCellValue(uiTableModelHandler *mh, uiTableModel *m, int row, int column,
 	const uiTableValue *value)
 {
-	(void) mh; (void) m; (void) row; (void) column; (void) value;	// read-only model
+	(void) mh; (void) m;
+	if (column == 5)	// checkbox toggled
+		doneFlag[row] = (value != NULL && uiTableValueInt(value)) ? 1 : 0;
+	else if (column == 6) {	// button clicked (value is NULL)
+		printf("button clicked on row %d (%s)\n", row, rowdata[row][0]);
+		fflush(stdout);
+	}
 }
 
 static uiTableModelHandler handler = {
@@ -119,7 +127,7 @@ int main(void)
 	swatches[3] = makeSwatch(200, 110, 200);
 	swatches[4] = makeSwatch(220, 90, 90);
 
-	w = uiNewWindow("libui-ng on Haiku — uiTable", 760, 240, 0);
+	w = uiNewWindow("libui-ng on Haiku — uiTable", 880, 240, 0);
 	uiWindowOnClosing(w, onClosing, NULL);
 	uiWindowSetMargined(w, 1);
 
@@ -134,7 +142,8 @@ int main(void)
 	uiTableAppendTextColumn(table, "Department", 2, uiTableModelColumnNeverEditable, NULL);
 	uiTableAppendTextColumn(table, "Status",     3, uiTableModelColumnNeverEditable, NULL);
 	uiTableAppendProgressBarColumn(table, "Load", 4);
-	uiTableAppendCheckboxColumn(table, "Done", 5, uiTableModelColumnNeverEditable);
+	uiTableAppendCheckboxColumn(table, "Done", 5, uiTableModelColumnAlwaysEditable);
+	uiTableAppendButtonColumn(table, "Action", 6, uiTableModelColumnAlwaysEditable);
 	uiTableOnRowClicked(table, onRowClicked, NULL);
 
 	uiWindowSetChild(w, uiControl(table));

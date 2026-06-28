@@ -17,6 +17,12 @@
 
 enum { colText, colImage, colImageText, colCheckbox, colCheckboxText, colProgress, colButton };
 
+// Interactive cells call back into the model via these (defined after uiTable + fillRow). BColumn's
+// MouseDown(parent,row,field,rect,point,buttons) hook gives us the row+field, so checkbox/button
+// columns can toggle / fire without any BColumnListView subclassing.
+static void uiprivToggleCheckbox(uiTable *t, BRow *brow, int modelColumn);
+static void uiprivButtonCellClicked(uiTable *t, BRow *brow, int modelColumn);
+
 // Custom display columns: progress bar and checkbox. Both read the cell's BStringField (which holds
 // the model int as text) and draw — display-only (interactive toggling/clicking is a follow-up, as
 // BColumn doesn't expose per-cell click routing simply). DrawField is BColumn's drawing hook.
@@ -43,8 +49,13 @@ public:
 
 class CheckColumn : public BTitledColumn {
 public:
+	uiTable *table;
+	int modelColumn;
 	CheckColumn(const char *title, float w, float minW, float maxW)
-		: BTitledColumn(title, w, minW, maxW, B_ALIGN_CENTER) {}
+		: BTitledColumn(title, w, minW, maxW, B_ALIGN_CENTER), table(NULL), modelColumn(0)
+	{
+		SetWantsEvents(true);	// required for BColumnListView to route MouseDown to us
+	}
 	virtual void DrawField(BField *field, BRect rect, BView *parent)
 	{
 		BStringField *f = dynamic_cast<BStringField *>(field);
@@ -58,6 +69,50 @@ public:
 			parent->StrokeLine(BPoint(box.left + 2, box.top + 6), BPoint(box.left + 5, box.top + 10));
 			parent->StrokeLine(BPoint(box.left + 5, box.top + 10), BPoint(box.left + 11, box.top + 2));
 		}
+	}
+	virtual void MouseDown(BColumnListView *parent, BRow *row, BField *field,
+		BRect fieldRect, BPoint point, uint32 buttons)
+	{
+		(void) parent; (void) field; (void) fieldRect; (void) point; (void) buttons;
+		if (table != NULL)
+			uiprivToggleCheckbox(table, row, modelColumn);
+	}
+};
+
+// A clickable button cell: draws the text in a button-styled rect; a click invokes the model's
+// SetCellValue with NULL (libui's button-column protocol).
+class ButtonColumn : public BTitledColumn {
+public:
+	uiTable *table;
+	int modelColumn;
+	ButtonColumn(const char *title, float w, float minW, float maxW)
+		: BTitledColumn(title, w, minW, maxW, B_ALIGN_CENTER), table(NULL), modelColumn(0)
+	{
+		SetWantsEvents(true);
+	}
+	virtual void DrawField(BField *field, BRect rect, BView *parent)
+	{
+		BStringField *f = dynamic_cast<BStringField *>(field);
+		const char *s = (f != NULL) ? f->String() : "";
+		BRect btn = rect;
+		btn.InsetBy(3, 3);
+		parent->SetHighColor(make_color(228, 228, 228, 255));
+		parent->FillRect(btn);
+		parent->SetHighColor(make_color(140, 140, 140, 255));
+		parent->StrokeRect(btn);
+		parent->SetHighColor(make_color(0, 0, 0, 255));
+		font_height fh;
+		parent->GetFontHeight(&fh);
+		float tw = parent->StringWidth(s);
+		parent->DrawString(s, BPoint(btn.left + (btn.Width() - tw) / 2,
+			btn.top + (btn.Height() + fh.ascent - fh.descent) / 2));
+	}
+	virtual void MouseDown(BColumnListView *parent, BRow *row, BField *field,
+		BRect fieldRect, BPoint point, uint32 buttons)
+	{
+		(void) parent; (void) field; (void) fieldRect; (void) point; (void) buttons;
+		if (table != NULL)
+			uiprivButtonCellClicked(table, row, modelColumn);
 	}
 };
 
@@ -148,6 +203,38 @@ static void fillRow(uiTable *t, BRow *r, int row)
 	}
 }
 
+// Called from CheckColumn/ButtonColumn::MouseDown (already on the locked window thread, so no
+// extra locking). Updates the model via SetCellValue, then refreshes the affected row.
+static void uiprivToggleCheckbox(uiTable *t, BRow *brow, int modelColumn)
+{
+	int row = (int) t->rows->IndexOf(brow);
+	if (row < 0)
+		return;
+	int cur = 0;
+	uiTableValue *v = (*(t->model->mh->CellValue))(t->model->mh, t->model, row, modelColumn);
+	if (v != NULL) {
+		if (uiTableValueGetType(v) == uiTableValueTypeInt)
+			cur = uiTableValueInt(v);
+		uiFreeTableValue(v);
+	}
+	uiTableValue *nv = uiNewTableValueInt(cur ? 0 : 1);
+	(*(t->model->mh->SetCellValue))(t->model->mh, t->model, row, modelColumn, nv);
+	uiFreeTableValue(nv);
+	fillRow(t, brow, row);
+	t->view->UpdateRow(brow);
+}
+
+static void uiprivButtonCellClicked(uiTable *t, BRow *brow, int modelColumn)
+{
+	int row = (int) t->rows->IndexOf(brow);
+	if (row < 0)
+		return;
+	// button columns signal a click via SetCellValue(NULL) per libui's protocol
+	(*(t->model->mh->SetCellValue))(t->model->mh, t->model, row, modelColumn, NULL);
+	fillRow(t, brow, row);
+	t->view->UpdateRow(brow);
+}
+
 static int selectedIndex(uiTable *t)
 {
 	BRow *r = t->view->CurrentSelection(NULL);
@@ -216,9 +303,17 @@ static void addColumn(uiTable *t, const char *name, int modelColumn, int kind)
 		col = new BBitmapColumn(name, 48, 20, 200, B_ALIGN_CENTER);
 	else if (kind == colProgress)
 		col = new ProgressColumn(name, 130, 50, 400);
-	else if (kind == colCheckbox)
-		col = new CheckColumn(name, 60, 30, 200);
-	else
+	else if (kind == colCheckbox) {
+		CheckColumn *cc = new CheckColumn(name, 60, 30, 200);
+		cc->table = t;
+		cc->modelColumn = modelColumn;
+		col = cc;
+	} else if (kind == colButton) {
+		ButtonColumn *bc = new ButtonColumn(name, 90, 50, 300);
+		bc->table = t;
+		bc->modelColumn = modelColumn;
+		col = bc;
+	} else
 		col = new BStringColumn(name, 150, 30, 2000, B_TRUNCATE_END);
 	t->view->AddColumn(col, k);
 
