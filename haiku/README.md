@@ -55,11 +55,12 @@ touching the BeAPI's C++ directly — which is the hard part for most people.
   `uiDrawPath` (BShape; lines, beziers, rectangles, flattened arcs), `uiDrawFill` (solid + linear/
   radial gradients), `uiDrawStroke` (thickness, caps, joins), `uiDrawMatrix` (translate/scale/rotate/
   skew/invert), `uiDrawTransform`, `uiDrawClip`, `uiDrawSave`/`uiDrawRestore`, and mouse/key events.
-- `uiDrawText` + text layout — renders an attributed string's text with the default font, word-wrapped
-  to the layout width and horizontally aligned (`uiDrawNewTextLayout`/`uiDrawText`/
-  `uiDrawTextLayoutExtents`). Per-run attributes (color/weight/size spans, underline) are not applied
-  yet; the default font's family/size/bold/italic are. Uses the common attributed-string code plus a
-  simple 1-codepoint-per-grapheme breaker (correct for Latin/precomposed text).
+- `uiDrawText` + text layout — renders an attributed string word-wrapped to the layout width and
+  horizontally aligned (`uiDrawNewTextLayout`/`uiDrawText`/`uiDrawTextLayoutExtents`), with **per-run
+  attributes**: family, size, weight (bold), italic, color, and underline spans (flattened to a
+  per-byte style array, drawn as same-style segments). Background / underline-color / stretch /
+  OpenType-feature attributes aren't applied. Uses the common attributed-string code plus a simple
+  1-codepoint-per-grapheme breaker (correct for Latin/precomposed text).
 
 Eight demos build and run: `haiku/test/hello.c` (minimal window + label + button),
 `haiku/test/widgets.c` (a tour of the controls, slider wired to the progress bar),
@@ -72,9 +73,10 @@ paragraph, aligned lines). All display correct native UI. See the build/run step
 
 **Every libui control constructor is implemented**, as is `uiArea` drawing (vector + text), `uiImage`,
 and rich table columns (image/progress/checkbox/button, with interactive checkbox + button cells).
-What remains is depth: inline text-cell editing; per-run text attributes in `uiDrawText`
-(color/weight/size spans, underline); and a proper Unicode grapheme breaker for complex-script text.
-(Image brushes are not exposed by libui's `uiDrawBrush` struct, so there's nothing to implement there.)
+What remains is depth: inline text-cell editing in `uiTable`; a proper Unicode grapheme breaker for
+complex-script text (and the few unapplied text attributes — background, underline color, stretch,
+OpenType features). (Image brushes are not exposed by libui's `uiDrawBrush` struct, so there's nothing
+to implement there.)
 
 ### Menus and dialogs — notes
 
