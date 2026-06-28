@@ -25,15 +25,18 @@ static void drawText(uiDrawContext *ctx, const char *text, uiFontDescriptor *fon
 // Demonstrates per-run attributes: color / bold / italic / underline / larger size spans.
 static void drawStyled(uiDrawContext *ctx, double x, double y, double width)
 {
-	//                0   4    9      16        26
+	//                0   4    9      16        26    32
 	const char *txt = "Red bold italic underline big - styled per run.";
 	uiAttributedString *as = uiNewAttributedString(txt);
 	uiAttributedStringSetAttribute(as, uiNewColorAttribute(0.85, 0.10, 0.10, 1.0), 0, 3);   // Red
 	uiAttributedStringSetAttribute(as, uiNewWeightAttribute((uiTextWeight) 700), 4, 8);      // bold
 	uiAttributedStringSetAttribute(as, uiNewItalicAttribute(uiTextItalicItalic), 9, 15);     // italic
 	uiAttributedStringSetAttribute(as, uiNewUnderlineAttribute(uiUnderlineSingle), 16, 25);  // underline
+	uiAttributedStringSetAttribute(as,
+		uiNewUnderlineColorAttribute(uiUnderlineColorCustom, 0.85, 0.1, 0.1, 1.0), 16, 25);  // ...in red
 	uiAttributedStringSetAttribute(as, uiNewSizeAttribute(24), 26, 29);                      // big
 	uiAttributedStringSetAttribute(as, uiNewColorAttribute(0.1, 0.4, 0.85, 1.0), 26, 29);    // big in blue
+	uiAttributedStringSetAttribute(as, uiNewBackgroundAttribute(1.0, 0.93, 0.3, 1.0), 32, 38); // "styled" highlight
 
 	uiDrawTextLayoutParams p;
 	p.String = as;

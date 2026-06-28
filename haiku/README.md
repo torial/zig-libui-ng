@@ -57,10 +57,10 @@ touching the BeAPI's C++ directly — which is the hard part for most people.
   skew/invert), `uiDrawTransform`, `uiDrawClip`, `uiDrawSave`/`uiDrawRestore`, and mouse/key events.
 - `uiDrawText` + text layout — renders an attributed string word-wrapped to the layout width and
   horizontally aligned (`uiDrawNewTextLayout`/`uiDrawText`/`uiDrawTextLayoutExtents`), with **per-run
-  attributes**: family, size, weight (bold), italic, color, and underline spans (flattened to a
-  per-byte style array, drawn as same-style segments). Background / underline-color / stretch /
-  OpenType-feature attributes aren't applied. Uses the common attributed-string code plus a simple
-  1-codepoint-per-grapheme breaker (correct for Latin/precomposed text).
+  attributes**: family, size, weight (bold), italic, color, underline, background, and underline-color
+  spans (flattened to a per-byte style array, drawn as same-style segments). Stretch and OpenType-
+  feature attributes aren't applied (no `BFont` equivalent). Uses the common attributed-string code
+  plus a simple 1-codepoint-per-grapheme breaker (correct for Latin/precomposed text).
 
 Eight demos build and run: `haiku/test/hello.c` (minimal window + label + button),
 `haiku/test/widgets.c` (a tour of the controls, slider wired to the progress bar),
@@ -74,8 +74,8 @@ paragraph, aligned lines). All display correct native UI. See the build/run step
 **Every libui control constructor is implemented**, as is `uiArea` drawing (vector + text), `uiImage`,
 and rich table columns (image/progress/checkbox/button, with interactive checkbox + button cells).
 What remains is depth: inline text-cell editing in `uiTable`; a proper Unicode grapheme breaker for
-complex-script text (and the few unapplied text attributes — background, underline color, stretch,
-OpenType features). (Image brushes are not exposed by libui's `uiDrawBrush` struct, so there's nothing
+complex-script text; and the two unapplied text attributes (stretch, OpenType features) that have no
+`BFont` equivalent. (Image brushes are not exposed by libui's `uiDrawBrush` struct, so there's nothing
 to implement there.)
 
 ### Menus and dialogs — notes

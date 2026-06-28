@@ -19,6 +19,10 @@ struct charStyle {
 	bool hasColor;
 	rgb_color color;
 	int underline;		// uiUnderlineNone = none
+	bool hasBg;
+	rgb_color bg;
+	bool hasUlColor;
+	rgb_color ulColor;
 };
 
 struct uiDrawTextLayout {
@@ -73,8 +77,32 @@ static uiForEach applyAttr(const uiAttributedString *s, const uiAttribute *a,
 		case uiAttributeTypeUnderline:
 			cs->underline = uiAttributeUnderline(a);
 			break;
+		case uiAttributeTypeBackground: {
+			double r, g, b, al;
+			uiAttributeColor(a, &r, &g, &b, &al);
+			cs->hasBg = true;
+			cs->bg = make_color((uint8) (r * 255), (uint8) (g * 255),
+				(uint8) (b * 255), (uint8) (al * 255));
+			break;
+		}
+		case uiAttributeTypeUnderlineColor: {
+			uiUnderlineColor u;
+			double r, g, b, al;
+			uiAttributeUnderlineColor(a, &u, &r, &g, &b, &al);
+			cs->hasUlColor = true;
+			if (u == uiUnderlineColorCustom)
+				cs->ulColor = make_color((uint8) (r * 255), (uint8) (g * 255),
+					(uint8) (b * 255), (uint8) (al * 255));
+			else if (u == uiUnderlineColorSpelling)
+				cs->ulColor = make_color(220, 40, 40, 255);
+			else if (u == uiUnderlineColorGrammar)
+				cs->ulColor = make_color(40, 160, 40, 255);
+			else
+				cs->ulColor = make_color(40, 80, 220, 255);
+			break;
+		}
 		default:
-			break;	// background / underline color / stretch / features not applied
+			break;	// stretch / OpenType features not applied (no BFont equivalent)
 		}
 	}
 	return uiForEachContinue;
@@ -104,6 +132,8 @@ uiDrawTextLayout *uiDrawNewTextLayout(uiDrawTextLayoutParams *p)
 			tl->styles[i].italic = -1;
 			tl->styles[i].hasColor = false;
 			tl->styles[i].underline = uiUnderlineNone;
+			tl->styles[i].hasBg = false;
+			tl->styles[i].hasUlColor = false;
 		}
 		uiAttributedStringForEachAttribute(p->String, applyAttr, tl);
 	}
@@ -165,11 +195,18 @@ static bool sameStyle(uiDrawTextLayout *tl, size_t a, size_t b)
 		return true;
 	charStyle *x = &tl->styles[a], *y = &tl->styles[b];
 	if (x->family != y->family || x->size != y->size || x->weight != y->weight
-		|| x->italic != y->italic || x->hasColor != y->hasColor || x->underline != y->underline)
+		|| x->italic != y->italic || x->hasColor != y->hasColor || x->underline != y->underline
+		|| x->hasBg != y->hasBg || x->hasUlColor != y->hasUlColor)
 		return false;
-	if (x->hasColor)
-		return x->color.red == y->color.red && x->color.green == y->color.green
-			&& x->color.blue == y->color.blue && x->color.alpha == y->color.alpha;
+	if (x->hasColor && (x->color.red != y->color.red || x->color.green != y->color.green
+		|| x->color.blue != y->color.blue || x->color.alpha != y->color.alpha))
+		return false;
+	if (x->hasBg && (x->bg.red != y->bg.red || x->bg.green != y->bg.green
+		|| x->bg.blue != y->bg.blue || x->bg.alpha != y->bg.alpha))
+		return false;
+	if (x->hasUlColor && (x->ulColor.red != y->ulColor.red || x->ulColor.green != y->ulColor.green
+		|| x->ulColor.blue != y->ulColor.blue || x->ulColor.alpha != y->ulColor.alpha))
+		return false;
 	return true;
 }
 
@@ -297,11 +334,21 @@ void uiDrawText(uiDrawContext *c, uiDrawTextLayout *tl, double x, double y)
 			while (k < lr->end && sameStyle(tl, i, k)) k++;
 			BFont f = fontAt(tl, i);
 			v->SetFont(&f);
-			v->SetHighColor(colorAt(tl, i));
 			float segW = f.StringWidth(tl->text + i, (int32) (k - i));
+			charStyle *cs = (tl->styles != NULL && i < tl->len) ? &tl->styles[i] : NULL;
+			// background fill behind the glyphs
+			if (cs != NULL && cs->hasBg) {
+				font_height fh;
+				f.GetHeight(&fh);
+				v->SetHighColor(cs->bg);
+				v->FillRect(BRect(penX, baseline - fh.ascent, penX + segW, baseline + fh.descent));
+			}
+			v->SetHighColor(colorAt(tl, i));
 			v->DrawString(tl->text + i, (int32) (k - i), BPoint(penX, baseline));
-			if (underlineAt(tl, i))
+			if (underlineAt(tl, i)) {
+				v->SetHighColor((cs != NULL && cs->hasUlColor) ? cs->ulColor : colorAt(tl, i));
 				v->StrokeLine(BPoint(penX, baseline + 2), BPoint(penX + segW, baseline + 2));
+			}
 			penX += segW;
 			i = k;
 		}
