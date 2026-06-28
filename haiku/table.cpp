@@ -3,7 +3,8 @@
 // SCOPE: text columns are fully supported. The other column kinds (image, image+text, checkbox,
 // checkbox+text, progress bar, button) are rendered best-effort as text for now (BColumnListView's
 // richer column types need dedicated BColumn subclasses) — they keep the column/field indexing
-// consistent and display the model value as a string. Inline cell editing is not wired up.
+// consistent and display the model value as a string. Editable text columns support in-place editing
+// via a BTextControl overlaid on the cell (CellEditor); checkbox/button columns are interactive.
 //
 // libui's model is pull-based but BColumnListView is push-based, so we keep a BList of BRows parallel
 // to the view (for index<->BRow mapping) and (re)fill fields from the model as columns are appended
@@ -22,6 +23,36 @@ enum { colText, colImage, colImageText, colCheckbox, colCheckboxText, colProgres
 // columns can toggle / fire without any BColumnListView subclassing.
 static void uiprivToggleCheckbox(uiTable *t, BRow *brow, int modelColumn);
 static void uiprivButtonCellClicked(uiTable *t, BRow *brow, int modelColumn);
+static bool uiprivCellEditable(uiTable *t, BRow *brow, int editCol);
+static void uiprivBeginCellEdit(uiTable *t, BColumnListView *clv, BRow *brow,
+	BRect fieldRect, int modelColumn);
+static void uiprivCommitCellEdit(uiTable *t);
+
+// In-place text editor: a BTextControl overlaid on a cell. One instance per table, reused (never
+// deleted from within its own message dispatch). Enter commits via uiprivCommitCellEdit.
+class CellEditor : public BTextControl {
+public:
+	uiTable *table;
+	CellEditor(BRect frame, const char *text)
+		: BTextControl(frame, "uiCellEditor", NULL, text, new BMessage('edDn'),
+			B_FOLLOW_NONE, B_WILL_DRAW | B_NAVIGABLE), table(NULL) {}
+	virtual void AttachedToWindow()
+	{
+		BTextControl::AttachedToWindow();
+		SetTarget(this);
+		MakeFocus(true);
+		if (TextView() != NULL)
+			TextView()->SelectAll();
+	}
+	virtual void MessageReceived(BMessage *m)
+	{
+		if (m->what == 'edDn') {	// Enter pressed
+			uiprivCommitCellEdit(table);
+			return;
+		}
+		BTextControl::MessageReceived(m);
+	}
+};
 
 // Custom display columns: progress bar and checkbox. Both read the cell's BStringField (which holds
 // the model int as text) and draw — display-only (interactive toggling/clicking is a follow-up, as
@@ -116,6 +147,31 @@ public:
 	}
 };
 
+// An editable text column: clicking an editable cell opens an in-place CellEditor.
+class EditableStringColumn : public BStringColumn {
+public:
+	uiTable *table;
+	int modelColumn;
+	int editableModelColumn;
+	EditableStringColumn(const char *title, float w, float mn, float mx)
+		: BStringColumn(title, w, mn, mx, B_TRUNCATE_END),
+		  table(NULL), modelColumn(0), editableModelColumn(uiTableModelColumnNeverEditable)
+	{
+		SetWantsEvents(true);
+	}
+	virtual void MouseDown(BColumnListView *parent, BRow *row, BField *field,
+		BRect fieldRect, BPoint point, uint32 buttons)
+	{
+		(void) field; (void) point; (void) buttons;
+		if (table == NULL)
+			return;
+		// row selection is already handled by the CLV before this; only editable cells edit
+		if (!uiprivCellEditable(table, row, editableModelColumn))
+			return;
+		uiprivBeginCellEdit(table, parent, row, fieldRect, modelColumn);
+	}
+};
+
 struct tableColumn {
 	int modelColumn;	// primary data column in the model
 	int kind;
@@ -135,11 +191,19 @@ struct uiTable {
 	void *onRowClickedData;
 	void (*onRowDoubleClicked)(uiTable *, int, void *);
 	void *onRowDoubleClickedData;
+	CellEditor *editor;	// reused in-place text editor (NULL until first edit)
+	int editRow;
+	int editModelColumn;
 };
 
 static void uiTableDestroy(uiControl *cc)
 {
 	uiTable *t = (uiTable *) cc;
+	if (t->editor != NULL) {		// detach + delete before the view tree goes away
+		if (t->editor->Window() != NULL)
+			t->editor->RemoveSelf();
+		delete t->editor;
+	}
 	t->model->tables->RemoveItem(t);
 	for (int32 i = 0; i < t->columns->CountItems(); i++)
 		delete (tableColumn *) t->columns->ItemAt(i);
@@ -235,6 +299,71 @@ static void uiprivButtonCellClicked(uiTable *t, BRow *brow, int modelColumn)
 	t->view->UpdateRow(brow);
 }
 
+static bool uiprivCellEditable(uiTable *t, BRow *brow, int editCol)
+{
+	if (editCol == uiTableModelColumnNeverEditable)
+		return false;
+	if (editCol == uiTableModelColumnAlwaysEditable)
+		return true;
+	int r = (int) t->rows->IndexOf(brow);
+	if (r < 0)
+		return false;
+	int ed = 0;
+	uiTableValue *v = (*(t->model->mh->CellValue))(t->model->mh, t->model, r, editCol);
+	if (v != NULL) {
+		if (uiTableValueGetType(v) == uiTableValueTypeInt)
+			ed = uiTableValueInt(v);
+		uiFreeTableValue(v);
+	}
+	return ed != 0;
+}
+
+static void uiprivBeginCellEdit(uiTable *t, BColumnListView *clv, BRow *brow,
+	BRect fieldRect, int modelColumn)
+{
+	int r = (int) t->rows->IndexOf(brow);
+	if (r < 0)
+		return;
+	if (t->editor != NULL && t->editor->Window() != NULL)
+		uiprivCommitCellEdit(t);	// commit any in-progress edit first
+
+	BString cur;
+	uiTableValue *v = (*(t->model->mh->CellValue))(t->model->mh, t->model, r, modelColumn);
+	if (v != NULL) {
+		if (uiTableValueGetType(v) == uiTableValueTypeString)
+			cur = uiTableValueString(v);
+		uiFreeTableValue(v);
+	}
+
+	if (t->editor == NULL) {
+		t->editor = new CellEditor(fieldRect, cur.String());
+		t->editor->table = t;
+	} else {
+		t->editor->MoveTo(fieldRect.left, fieldRect.top);
+		t->editor->ResizeTo(fieldRect.Width(), fieldRect.Height());
+		t->editor->SetText(cur.String());
+	}
+	t->editRow = r;
+	t->editModelColumn = modelColumn;
+	clv->ScrollView()->AddChild(t->editor);	// AttachedToWindow -> focus + select all
+}
+
+static void uiprivCommitCellEdit(uiTable *t)
+{
+	if (t->editor == NULL || t->editor->Window() == NULL)
+		return;
+	BString text = t->editor->Text();
+	uiTableValue *nv = uiNewTableValueString(text.String());
+	(*(t->model->mh->SetCellValue))(t->model->mh, t->model, t->editRow, t->editModelColumn, nv);
+	uiFreeTableValue(nv);
+	BRow *brow = (BRow *) t->rows->ItemAt(t->editRow);
+	if (brow != NULL) {
+		fillRow(t, brow, t->editRow);
+		t->view->UpdateRow(brow);
+	}
+	t->editor->RemoveSelf();	// detach; keep the object for reuse, never delete during dispatch
+}
+
 static int selectedIndex(uiTable *t)
 {
 	BRow *r = t->view->CurrentSelection(NULL);
@@ -274,6 +403,9 @@ uiTable *uiNewTable(uiTableParams *params)
 	t->onSelectionChanged = defaultSelChanged;
 	t->onRowClicked = defaultRowClicked;
 	t->onRowDoubleClicked = defaultRowClicked;
+	t->editor = NULL;
+	t->editRow = 0;
+	t->editModelColumn = 0;
 
 	t->view = new BColumnListView("uiTable", 0);
 	t->view->SetSelectionMode(B_SINGLE_SELECTION_LIST);
@@ -292,7 +424,7 @@ uiTable *uiNewTable(uiTableParams *params)
 	return t;
 }
 
-static void addColumn(uiTable *t, const char *name, int modelColumn, int kind)
+static void addColumn(uiTable *t, const char *name, int modelColumn, int kind, int editCol)
 {
 	BWindow *win = t->view->Window();
 	if (win != NULL) win->Lock();
@@ -313,6 +445,12 @@ static void addColumn(uiTable *t, const char *name, int modelColumn, int kind)
 		bc->table = t;
 		bc->modelColumn = modelColumn;
 		col = bc;
+	} else if (kind == colText && editCol != uiTableModelColumnNeverEditable) {
+		EditableStringColumn *ec = new EditableStringColumn(name, 150, 30, 2000);
+		ec->table = t;
+		ec->modelColumn = modelColumn;
+		ec->editableModelColumn = editCol;
+		col = ec;
 	} else
 		col = new BStringColumn(name, 150, 30, 2000, B_TRUNCATE_END);
 	t->view->AddColumn(col, k);
@@ -335,26 +473,26 @@ void uiTableAppendTextColumn(uiTable *t, const char *name, int textModelColumn,
 	int textEditableModelColumn, uiTableTextColumnOptionalParams *textParams)
 {
 	(void) textEditableModelColumn; (void) textParams;
-	addColumn(t, name, textModelColumn, colText);
+	addColumn(t, name, textModelColumn, colText, textEditableModelColumn);
 }
 
 void uiTableAppendImageColumn(uiTable *t, const char *name, int imageModelColumn)
 {
-	addColumn(t, name, imageModelColumn, colImage);
+	addColumn(t, name, imageModelColumn, colImage, uiTableModelColumnNeverEditable);
 }
 
 void uiTableAppendImageTextColumn(uiTable *t, const char *name, int imageModelColumn,
 	int textModelColumn, int textEditableModelColumn, uiTableTextColumnOptionalParams *textParams)
 {
 	(void) imageModelColumn; (void) textEditableModelColumn; (void) textParams;
-	addColumn(t, name, textModelColumn, colImageText);
+	addColumn(t, name, textModelColumn, colImageText, uiTableModelColumnNeverEditable);
 }
 
 void uiTableAppendCheckboxColumn(uiTable *t, const char *name, int checkboxModelColumn,
 	int checkboxEditableModelColumn)
 {
 	(void) checkboxEditableModelColumn;
-	addColumn(t, name, checkboxModelColumn, colCheckbox);
+	addColumn(t, name, checkboxModelColumn, colCheckbox, uiTableModelColumnNeverEditable);
 }
 
 void uiTableAppendCheckboxTextColumn(uiTable *t, const char *name, int checkboxModelColumn,
@@ -363,19 +501,19 @@ void uiTableAppendCheckboxTextColumn(uiTable *t, const char *name, int checkboxM
 {
 	(void) checkboxModelColumn; (void) checkboxEditableModelColumn;
 	(void) textEditableModelColumn; (void) textParams;
-	addColumn(t, name, textModelColumn, colCheckboxText);
+	addColumn(t, name, textModelColumn, colCheckboxText, uiTableModelColumnNeverEditable);
 }
 
 void uiTableAppendProgressBarColumn(uiTable *t, const char *name, int progressModelColumn)
 {
-	addColumn(t, name, progressModelColumn, colProgress);
+	addColumn(t, name, progressModelColumn, colProgress, uiTableModelColumnNeverEditable);
 }
 
 void uiTableAppendButtonColumn(uiTable *t, const char *name, int buttonModelColumn,
 	int buttonClickableModelColumn)
 {
 	(void) buttonClickableModelColumn;
-	addColumn(t, name, buttonModelColumn, colButton);
+	addColumn(t, name, buttonModelColumn, colButton, uiTableModelColumnNeverEditable);
 }
 
 int uiTableHeaderVisible(uiTable *t) { (void) t; return 1; }

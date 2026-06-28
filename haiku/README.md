@@ -49,7 +49,8 @@ touching the BeAPI's C++ directly — which is the hard part for most people.
   selection mode). Progress-bar, checkbox, and button columns render natively via custom `BColumn`
   subclasses; checkbox and button columns are **interactive** (`BColumn::MouseDown` + `SetWantsEvents`)
   — a checkbox click toggles the cell through the model's `SetCellValue`, a button click fires it with
-  `NULL`. Inline text-cell editing is still a follow-up.
+  `NULL`. **Editable text columns** support in-place editing: clicking an editable cell overlays a
+  `BTextControl` (positioned via `GetFieldRect`/`ScrollView`), and Enter commits via `SetCellValue`.
 - `uiImage` (BBitmap) — `uiNewImage`/`uiImageAppend` (RGBA → BGRA), used by image table columns
 - `uiArea` + the vector drawing API — a custom-drawn BView whose `Draw` calls the handler, plus
   `uiDrawPath` (BShape; lines, beziers, rectangles, flattened arcs), `uiDrawFill` (solid + linear/
@@ -73,10 +74,10 @@ paragraph, aligned lines). All display correct native UI. See the build/run step
 
 **Every libui control constructor is implemented**, as is `uiArea` drawing (vector + text), `uiImage`,
 and rich table columns (image/progress/checkbox/button, with interactive checkbox + button cells).
-What remains is depth: inline text-cell editing in `uiTable`; a proper Unicode grapheme breaker for
-complex-script text; and the two unapplied text attributes (stretch, OpenType features) that have no
-`BFont` equivalent. (Image brushes are not exposed by libui's `uiDrawBrush` struct, so there's nothing
-to implement there.)
+What remains is small: a proper Unicode grapheme breaker for complex-script text (the stub is correct
+for Latin/precomposed text), and the two unapplied text attributes (stretch, OpenType features) that
+have no `BFont` equivalent. The in-place editor commits on Enter (not yet on focus-loss). (Image
+brushes are not exposed by libui's `uiDrawBrush` struct, so there's nothing to implement there.)
 
 ### Menus and dialogs — notes
 

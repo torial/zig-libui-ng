@@ -17,6 +17,7 @@ static const char *rowdata[][3] = {
 
 static const int loadPct[NROWS] = { 100, 60, 0, 80, 45 };
 static int doneFlag[NROWS] = { 1, 1, 0, 1, 0 };	// writable: toggled by the checkbox column
+static char nameBuf[NROWS][32];			// writable: edited in place via the Name column
 
 static uiImage *swatches[NROWS];
 
@@ -67,6 +68,8 @@ static uiTableValue *modelCellValue(uiTableModelHandler *mh, uiTableModel *m, in
 		return uiNewTableValueInt(doneFlag[row]);
 	if (column == 6)
 		return uiNewTableValueString("Ping");
+	if (column == 1)
+		return uiNewTableValueString(nameBuf[row]);	// editable
 	return uiNewTableValueString(rowdata[row][column - 1]);
 }
 
@@ -74,7 +77,12 @@ static void modelSetCellValue(uiTableModelHandler *mh, uiTableModel *m, int row,
 	const uiTableValue *value)
 {
 	(void) mh; (void) m;
-	if (column == 5)	// checkbox toggled
+	if (column == 1) {	// Name edited in place
+		if (value != NULL) {
+			strncpy(nameBuf[row], uiTableValueString(value), sizeof nameBuf[row] - 1);
+			nameBuf[row][sizeof nameBuf[row] - 1] = '\0';
+		}
+	} else if (column == 5)	// checkbox toggled
 		doneFlag[row] = (value != NULL && uiTableValueInt(value)) ? 1 : 0;
 	else if (column == 6) {	// button clicked (value is NULL)
 		printf("button clicked on row %d (%s)\n", row, rowdata[row][0]);
@@ -121,6 +129,11 @@ int main(void)
 		return 1;
 	}
 
+	for (int i = 0; i < NROWS; i++) {
+		strncpy(nameBuf[i], rowdata[i][0], sizeof nameBuf[i] - 1);
+		nameBuf[i][sizeof nameBuf[i] - 1] = '\0';
+	}
+
 	swatches[0] = makeSwatch(80, 160, 240);
 	swatches[1] = makeSwatch(120, 200, 120);
 	swatches[2] = makeSwatch(230, 180, 60);
@@ -138,7 +151,7 @@ int main(void)
 	p.RowBackgroundColorModelColumn = -1;
 	table = uiNewTable(&p);
 	uiTableAppendImageColumn(table, "",          0);
-	uiTableAppendTextColumn(table, "Name",       1, uiTableModelColumnNeverEditable, NULL);
+	uiTableAppendTextColumn(table, "Name",       1, uiTableModelColumnAlwaysEditable, NULL);
 	uiTableAppendTextColumn(table, "Department", 2, uiTableModelColumnNeverEditable, NULL);
 	uiTableAppendTextColumn(table, "Status",     3, uiTableModelColumnNeverEditable, NULL);
 	uiTableAppendProgressBarColumn(table, "Load", 4);
