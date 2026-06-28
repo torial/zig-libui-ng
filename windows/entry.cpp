@@ -7,6 +7,7 @@ struct uiEntry {
 	void (*onChanged)(uiEntry *, void *);
 	void *onChangedData;
 	BOOL inhibitChanged;
+	int placeholderLen;
 };
 
 static BOOL onWM_COMMAND(uiControl *c, HWND hwnd, WORD code, LRESULT *lResult)
@@ -63,15 +64,13 @@ char *uiEntryText(uiEntry *e)
 
 void uiEntrySetText(uiEntry *e, const char *text)
 {
-	int l;
 	// doing this raises an EN_CHANGED
 	e->inhibitChanged = TRUE;
 	uiWindowsSetWindowText(e->hwnd, text);
-	l = (int)strlen(text);
 	// Only set the cursor if the entry has focus to avoid weird scrolling upon window
 	// creation. Cursor placement is otherwise determined by mouse position upon click.
 	if (GetFocus() == e->hwnd)
-		Edit_SetSel(e->hwnd, l, l);
+		Edit_SetSel(e->hwnd, -1, -1);
 	e->inhibitChanged = FALSE;
 	// don't queue the control for resize; entry sizes are independent of their contents
 }
@@ -91,6 +90,16 @@ void uiEntrySetReadOnly(uiEntry *e, int readonly)
 {
 	if (Edit_SetReadOnly(e->hwnd, readonly) == 0)
 		logLastError(L"error setting uiEntry read-only state");
+}
+
+char *uiEntryPlaceholder(uiEntry *e)
+{
+	return uiprivEntryPlaceholder(e->hwnd, e->placeholderLen);
+}
+
+void uiEntrySetPlaceholder(uiEntry *e, const char *text)
+{
+	e->placeholderLen = uiprivSetEntryPlaceholder(e->hwnd, text);
 }
 
 static uiEntry *finishNewEntry(DWORD style)

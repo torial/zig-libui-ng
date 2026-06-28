@@ -21,6 +21,7 @@ struct uiArea {
 
 	uiprivClickCounter cc;
 	BOOL capturing;
+	BOOL inMouseDownEvent;
 
 	BOOL inside;
 	BOOL tracking;
@@ -35,6 +36,7 @@ extern void areaDrawOnResize(uiArea *, RECT *);
 // areascroll.cpp
 extern BOOL areaDoScroll(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lResult);
 extern void areaScrollOnResize(uiArea *, RECT *);
+extern void areaScrollTo(uiArea *a, double x, double y, double width, double height);
 extern void areaUpdateScroll(uiArea *a);
 
 // areaevents.cpp
@@ -42,8 +44,8 @@ extern BOOL areaDoEvents(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRE
 
 // areautil.cpp
 extern void loadAreaSize(uiArea *a, ID2D1RenderTarget *rt, double *width, double *height);
+extern void pixelsToDIPWithRT(ID2D1RenderTarget *rt, double *x, double *y);
 extern void pixelsToDIP(uiArea *a, double *x, double *y);
 extern void dipToPixels(uiArea *a, double *x, double *y);
 
 #endif
-

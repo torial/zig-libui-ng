@@ -7,9 +7,14 @@ static GHashTable *timers;
 
 const char *uiInit(uiInitOptions *o)
 {
+	uiInitOptions defaults;
 	GError *err = NULL;
 	const char *msg;
 
+	if (o == NULL) {
+		memset(&defaults, 0, sizeof defaults);
+		o = &defaults;
+	}
 	uiprivOptions = *o;
 	if (gtk_init_with_args(NULL, NULL, NULL, NULL, NULL, &err) == FALSE) {
 		msg = g_strdup(err->message);
@@ -26,11 +31,19 @@ const char *uiInit(uiInitOptions *o)
 	return NULL;
 }
 
-struct timer;		// TODO get rid of forward declaration
+struct timer {
+	int (*f)(void *);
+	void *data;
+	guint source;
+};
 
 static void uninitTimer(gpointer key, gpointer value, gpointer data)
 {
-	uiprivFree((struct timer *) key);
+	struct timer *t = (struct timer *) key;
+
+	if (t->source != 0)
+		g_source_remove(t->source);
+	uiprivFree(t);
 }
 
 void uiUninit(void)
@@ -123,16 +136,12 @@ void uiQueueMain(void (*f)(void *data), void *data)
 	gdk_threads_add_idle(doqueued, q);
 }
 
-struct timer {
-	int (*f)(void *);
-	void *data;
-};
-
 static gboolean doTimer(gpointer data)
 {
 	struct timer *t = (struct timer *) data;
 
 	if (!(*(t->f))(t->data)) {
+		t->source = 0;
 		g_hash_table_remove(timers, t);
 		uiprivFree(t);
 		return FALSE;
@@ -147,6 +156,6 @@ void uiTimer(int milliseconds, int (*f)(void *data), void *data)
 	t = uiprivNew(struct timer);
 	t->f = f;
 	t->data = data;
-	g_timeout_add(milliseconds, doTimer, t);
+	t->source = g_timeout_add(milliseconds, doTimer, t);
 	g_hash_table_add(timers, t);
 }

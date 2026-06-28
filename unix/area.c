@@ -91,11 +91,8 @@ static void areaWidget_size_allocate(GtkWidget *w, GtkAllocation *allocation)
 	GTK_WIDGET_CLASS(areaWidget_parent_class)->size_allocate(w, allocation);
 
 	if (!a->scrolling)
-		// we must redraw everything on resize because Windows requires it
-		// TODO https://developer.gnome.org/gtk3/3.10/GtkWidget.html#gtk-widget-set-redraw-on-allocate ?
-		// TODO drop this rule; it was stupid and documenting this was stupid — let platforms where it matters do it on their own
-		// TODO or do we not, for parity of performance?
-		gtk_widget_queue_resize(w);
+		// match the other backends: nonscrolling areas redraw fully on resize
+		gtk_widget_queue_draw(w);
 }
 
 static void loadAreaSize(uiArea *a, double *width, double *height)
@@ -510,10 +507,32 @@ void uiAreaQueueRedrawAll(uiArea *a)
 	gtk_widget_queue_draw(a->areaWidget);
 }
 
+static void clampAdjustmentPage(GtkAdjustment *adj, double start, double size)
+{
+	double end;
+
+	end = start + size;
+	if (end < start) {
+		double temp;
+
+		temp = start;
+		start = end;
+		end = temp;
+	}
+	gtk_adjustment_clamp_page(adj, start, end);
+}
+
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 {
-	// TODO
-	// TODO adjust adjustments and find source for that
+	GtkAdjustment *hadj;
+	GtkAdjustment *vadj;
+
+	if (!a->scrolling)
+		uiprivUserBug("You cannot call uiAreaScrollTo() on a non-scrolling uiArea. (area: %p)", a);
+	hadj = gtk_scrolled_window_get_hadjustment(a->sw);
+	vadj = gtk_scrolled_window_get_vadjustment(a->sw);
+	clampAdjustmentPage(hadj, x, width);
+	clampAdjustmentPage(vadj, y, height);
 }
 
 void uiAreaBeginUserWindowMove(uiArea *a)

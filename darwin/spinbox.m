@@ -5,6 +5,7 @@
 	NSTextField *tf;
 	NSNumberFormatter *formatter;
 	NSStepper *stepper;
+	BOOL libui_enabled;
 
 	double value;
 	double minimum;
@@ -21,6 +22,8 @@
 - (void)setMaximum:(double)max;
 - (IBAction)stepperClicked:(id)sender;
 - (void)controlTextDidChange:(NSNotification *)note;
+- (BOOL)isEnabled;
+- (void)setEnabled:(BOOL)e;
 @end
 
 struct uiSpinbox {
@@ -111,6 +114,7 @@ static CGFloat stepperYDelta(void)
 			1, -3,		// arbitrary amount; good enough visually (and it seems to match NSDatePicker too, at least on 10.11, which is even better)
 			@"uiSpinbox space between text field and stepper")];
 
+		self->libui_enabled = YES;
 		self->spinbox = sb;
 	}
 	return self;
@@ -126,6 +130,16 @@ static CGFloat stepperYDelta(void)
 	[self->stepper removeFromSuperview];
 	[self->stepper release];
 	[super dealloc];
+}
+
+- (NSView *)viewForFirstBaselineLayout
+{
+	return self->tf;
+}
+
+- (NSView *)viewForLastBaselineLayout
+{
+	return self->tf;
 }
 
 - (double)libui_value
@@ -173,6 +187,18 @@ static CGFloat stepperYDelta(void)
 {
 	[self libui_setValue:[self->tf doubleValue]];
 	(*(self->spinbox->onChanged))(self->spinbox, self->spinbox->onChangedData);
+}
+
+- (BOOL)isEnabled
+{
+	return self->libui_enabled;
+}
+
+- (void)setEnabled:(BOOL)e
+{
+	self->libui_enabled = e;
+	[self->tf setEnabled:e];
+	[self->stepper setEnabled:e];
 }
 
 @end

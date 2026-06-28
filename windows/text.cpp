@@ -4,6 +4,7 @@
 WCHAR *windowTextAndLen(HWND hwnd, LRESULT *len)
 {
 	LRESULT n;
+	int copied;
 	WCHAR *text;
 
 	n = SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0);
@@ -11,13 +12,16 @@ WCHAR *windowTextAndLen(HWND hwnd, LRESULT *len)
 		*len = n;
 	// WM_GETTEXTLENGTH does not include the null terminator
 	text = (WCHAR *) uiprivAlloc((n + 1) * sizeof (WCHAR), "WCHAR[]");
-	// note the comparison: the size includes the null terminator, but the return does not
-	if (GetWindowTextW(hwnd, text, n + 1) != n) {
+	SetLastError(ERROR_SUCCESS);
+	copied = GetWindowTextW(hwnd, text, n + 1);
+	if (copied == 0 && GetLastError() != ERROR_SUCCESS) {
 		logLastError(L"error getting window text");
 		// on error, return an empty string to be safe
 		*text = L'\0';
 		if (len != NULL)
 			*len = 0;
+	} else if (len != NULL) {
+		*len = copied;
 	}
 	return text;
 }
@@ -134,6 +138,52 @@ void uiWindowsSetWindowText(HWND hwnd, const char *text)
 	wtext = toUTF16(text);
 	setWindowText(hwnd, wtext);
 	uiprivFree(wtext);
+}
+
+// Placeholder text helpers (Win32 cue banner API).
+// We must cache the UTF-16 length because EM/CB_GETCUEBANNER requires
+// the caller to supply the buffer size and Win32 provides no length query.
+static char *getPlaceholder(HWND hwnd, int len, UINT msg)
+{
+	len += 1;
+	WCHAR *wtext = (WCHAR *)uiprivAlloc(len * sizeof (WCHAR), "WCHAR[]");
+	if (!SendMessageW(hwnd, msg, (WPARAM)wtext, len))
+		*wtext = L'\0';
+	char *text = toUTF8(wtext);
+	uiprivFree(wtext);
+	return text;
+}
+
+static int setPlaceholder(HWND hwnd, const char *text, UINT msg)
+{
+	WCHAR *wtext = toUTF16(text);
+	int len = wcslen(wtext);
+	if (!SendMessageW(hwnd, msg, FALSE, (LPARAM)wtext)) {
+		logLastError(L"error setting placeholder text");
+		len = 0;
+	}
+	uiprivFree(wtext);
+	return len;
+}
+
+char *uiprivEntryPlaceholder(HWND hwnd, int len)
+{
+	return getPlaceholder(hwnd, len, EM_GETCUEBANNER);
+}
+
+int uiprivSetEntryPlaceholder(HWND hwnd, const char *text)
+{
+	return setPlaceholder(hwnd, text, EM_SETCUEBANNER);
+}
+
+char *uiprivComboboxPlaceholder(HWND hwnd, int len)
+{
+	return getPlaceholder(hwnd, len, CB_GETCUEBANNER);
+}
+
+int uiprivSetComboboxPlaceholder(HWND hwnd, const char *text)
+{
+	return setPlaceholder(hwnd, text, CB_SETCUEBANNER);
 }
 
 int uiprivStricmp(const char *a, const char *b)

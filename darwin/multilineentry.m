@@ -18,6 +18,7 @@ struct uiMultilineEntry {
 	void (*onChanged)(uiMultilineEntry *, void *);
 	void *onChangedData;
 	BOOL changing;
+	BOOL readonly;
 };
 
 @implementation intrinsicSizeTextView
@@ -53,7 +54,34 @@ struct uiMultilineEntry {
 
 @end
 
-uiDarwinControlAllDefaultsExceptDestroy(uiMultilineEntry, sv)
+uiDarwinControlDefaultHandle(uiMultilineEntry, sv)
+uiDarwinControlDefaultParent(uiMultilineEntry, sv)
+uiDarwinControlDefaultSetParent(uiMultilineEntry, sv)
+uiDarwinControlDefaultToplevel(uiMultilineEntry, sv)
+uiDarwinControlDefaultVisible(uiMultilineEntry, sv)
+uiDarwinControlDefaultShow(uiMultilineEntry, sv)
+uiDarwinControlDefaultHide(uiMultilineEntry, sv)
+uiDarwinControlDefaultEnabled(uiMultilineEntry, sv)
+uiDarwinControlDefaultEnable(uiMultilineEntry, sv)
+uiDarwinControlDefaultDisable(uiMultilineEntry, sv)
+
+static void uiMultilineEntrySyncEnableState(uiDarwinControl *c, int enabled)
+{
+	uiMultilineEntry *e = uiMultilineEntry(c);
+
+	if (uiDarwinShouldStopSyncEnableState(c, enabled))
+		return;
+	[e->tv setEditable:(enabled && !e->readonly)];
+	[e->tv setSelectable:enabled];
+}
+
+uiDarwinControlDefaultSetSuperview(uiMultilineEntry, sv)
+uiDarwinControlDefaultHugsTrailingEdge(uiMultilineEntry, sv)
+uiDarwinControlDefaultHugsBottom(uiMultilineEntry, sv)
+uiDarwinControlDefaultChildEdgeHuggingChanged(uiMultilineEntry, sv)
+uiDarwinControlDefaultHuggingPriority(uiMultilineEntry, sv)
+uiDarwinControlDefaultSetHuggingPriority(uiMultilineEntry, sv)
+uiDarwinControlDefaultChildVisibilityChanged(uiMultilineEntry, sv)
 
 static void uiMultilineEntryDestroy(uiControl *c)
 {
@@ -75,24 +103,32 @@ char *uiMultilineEntryText(uiMultilineEntry *e)
 	return uiDarwinNSStringToText([e->tv string]);
 }
 
+static void multilineEntryReplaceText(uiMultilineEntry *e, NSRange range, NSString *text)
+{
+	e->changing = YES;
+	@try {
+		if ([e->tv shouldChangeTextInRange:range replacementString:text]) {
+			[[e->tv textStorage] replaceCharactersInRange:range
+				withString:text];
+			[e->tv didChangeText];
+		}
+	}
+	@finally {
+		e->changing = NO;
+	}
+}
+
 void uiMultilineEntrySetText(uiMultilineEntry *e, const char *text)
 {
-	[[e->tv textStorage] replaceCharactersInRange:NSMakeRange(0, [[e->tv string] length])
-		withString:uiprivToNSString(text)];
-	// must be called explicitly according to the documentation of shouldChangeTextInRange:replacementString:
-	e->changing = YES;
-	[e->tv didChangeText];
-	e->changing = NO;
+	multilineEntryReplaceText(e, NSMakeRange(0, [[e->tv string] length]),
+		uiprivToNSString(text));
 }
 
 // TODO scroll to end?
 void uiMultilineEntryAppend(uiMultilineEntry *e, const char *text)
 {
-	[[e->tv textStorage] replaceCharactersInRange:NSMakeRange([[e->tv string] length], 0)
-		withString:uiprivToNSString(text)];
-	e->changing = YES;
-	[e->tv didChangeText];
-	e->changing = NO;
+	multilineEntryReplaceText(e, NSMakeRange([[e->tv string] length], 0),
+		uiprivToNSString(text));
 }
 
 void uiMultilineEntryOnChanged(uiMultilineEntry *e, void (*f)(uiMultilineEntry *e, void *data), void *data)
@@ -103,17 +139,13 @@ void uiMultilineEntryOnChanged(uiMultilineEntry *e, void (*f)(uiMultilineEntry *
 
 int uiMultilineEntryReadOnly(uiMultilineEntry *e)
 {
-	return [e->tv isEditable] == NO;
+	return e->readonly;
 }
 
 void uiMultilineEntrySetReadOnly(uiMultilineEntry *e, int readonly)
 {
-	BOOL editable;
-
-	editable = YES;
-	if (readonly)
-		editable = NO;
-	[e->tv setEditable:editable];
+	e->readonly = readonly != 0;
+	[e->tv setEditable:(uiControlEnabledToUser(uiControl(e)) && !e->readonly)];
 }
 
 static uiMultilineEntry *finishMultilineEntry(BOOL hscroll)
@@ -125,6 +157,7 @@ static uiMultilineEntry *finishMultilineEntry(BOOL hscroll)
 	uiDarwinNewControl(uiMultilineEntry, e);
 
 	e->tv = [[intrinsicSizeTextView alloc] initWithFrame:NSZeroRect e:e];
+	e->readonly = NO;
 if (@available(macOS 10.14, *)) {
 	[e->tv setUsesAdaptiveColorMappingForDarkAppearance:YES];
 }

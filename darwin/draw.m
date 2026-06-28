@@ -174,6 +174,8 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 			dashes,
 			p->NumDashes);
 		uiprivFree(dashes);
+		if (dashPath == NULL)
+			return;
 	}
 	// the documentation is wrong: this produces a path suitable for calling CGPathCreateCopyByStrokingPath(), not for filling directly
 	// the cast is safe; we never modify the CGPathRef and always cast it back to a CGPathRef anyway
@@ -185,6 +187,8 @@ void uiDrawStroke(uiDrawContext *c, uiDrawPath *path, uiDrawBrush *b, uiDrawStro
 		p->MiterLimit);
 	if (p->NumDashes != 0)
 		CGPathRelease(dashPath);
+	if (p2.path == NULL)
+		return;
 
 	// always draw stroke fills using the winding rule
 	// otherwise intersecting figures won't draw correctly
@@ -223,9 +227,8 @@ static void fillGradient(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 	// gradients need a color space
 	// for consistency with windows, use sRGB
 	colorspace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
-	if (colorspace == NULL) {
-		// TODO
-	}
+	if (colorspace == NULL)
+		return;
 	// TODO add NULL check to other uses of CGColorSpace
 
 	// make the gradient
@@ -241,6 +244,10 @@ static void fillGradient(CGContextRef ctxt, uiDrawPath *p, uiDrawBrush *b)
 	gradient = CGGradientCreateWithColorComponents(colorspace, colors, locations, b->NumStops);
 	uiprivFree(locations);
 	uiprivFree(colors);
+	if (gradient == NULL) {
+		CGColorSpaceRelease(colorspace);
+		return;
+	}
 
 	// because we're mucking with clipping, we need to save the graphics state and restore it later
 	CGContextSaveGState(ctxt);
@@ -375,16 +382,17 @@ void uiDrawMatrixMultiply(uiDrawMatrix *dest, uiDrawMatrix *src)
 	c2m(&c, dest);
 }
 
-// there is no test for invertibility; CGAffineTransformInvert() is merely documented as returning the matrix unchanged if it isn't invertible
-// therefore, special care must be taken to catch matrices who are their own inverses
-// TODO figure out which matrices these are and do so
+static int transformInvertible(CGAffineTransform *c)
+{
+	return c->a * c->d - c->b * c->c != 0.0;
+}
+
 int uiDrawMatrixInvertible(uiDrawMatrix *m)
 {
-	CGAffineTransform c, d;
+	CGAffineTransform c;
 
 	m2c(m, &c);
-	d = CGAffineTransformInvert(c);
-	return CGAffineTransformEqualToTransform(c, d) == false;
+	return transformInvertible(&c);
 }
 
 int uiDrawMatrixInvert(uiDrawMatrix *m)
@@ -392,9 +400,9 @@ int uiDrawMatrixInvert(uiDrawMatrix *m)
 	CGAffineTransform c, d;
 
 	m2c(m, &c);
-	d = CGAffineTransformInvert(c);
-	if (CGAffineTransformEqualToTransform(c, d))
+	if (!transformInvertible(&c))
 		return 0;
+	d = CGAffineTransformInvert(c);
 	c2m(&d, m);
 	return 1;
 }

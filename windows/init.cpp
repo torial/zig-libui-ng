@@ -54,6 +54,11 @@ uiInitOptions uiprivOptions;
 
 const char *uiInit(uiInitOptions *o)
 {
+	uiInitOptions defaults;
+	if (o == NULL) {
+		memset(&defaults, 0, sizeof defaults);
+		o = &defaults;
+	}
 	STARTUPINFOW si;
 	const char *ce;
 	HICON hDefaultIcon;
@@ -149,8 +154,7 @@ void uiUninit(void)
 	uiprivUninitDrawText();
 	uninitDraw();
 	CoUninitialize();
-	if (DeleteObject(hollowBrush) == 0)
-		logLastError(L"error freeing hollow brush");
+	hollowBrush = NULL;
 	uninitContainer();
 	if (DeleteObject(hMessageFont) == 0)
 		logLastError(L"error deleting control font");

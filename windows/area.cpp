@@ -2,8 +2,15 @@
 #include "uipriv_windows.hpp"
 #include "area.hpp"
 
-// TODO handle WM_DESTROY/WM_NCDESTROY
 // TODO same for other Direct2D stuff
+static void releaseAreaRenderTarget(uiArea *a)
+{
+	if (a->rt != NULL) {
+		a->rt->Release();
+		a->rt = NULL;
+	}
+}
+
 static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	uiArea *a;
@@ -24,12 +31,20 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 	}
 
+	if (uMsg == WM_DESTROY || uMsg == WM_NCDESTROY) {
+		releaseAreaRenderTarget(a);
+		if (uMsg == WM_NCDESTROY)
+			SetWindowLongPtrW(hwnd, GWLP_USERDATA, (LONG_PTR) NULL);
+		return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+	}
+
 	// always recreate the render target if necessary
 	if (a->rt == NULL)
 		a->rt = makeHWNDRenderTarget(a->hwnd);
 
-	if (areaDoDraw(a, uMsg, wParam, lParam, &lResult) != FALSE)
-		return lResult;
+	if (a->rt != NULL)
+		if (areaDoDraw(a, uMsg, wParam, lParam, &lResult) != FALSE)
+			return lResult;
 
 	if (uMsg == WM_WINDOWPOSCHANGED) {
 		if ((wp->flags & SWP_NOSIZE) != 0)
@@ -51,7 +66,16 @@ static LRESULT CALLBACK areaWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 
 // control implementation
 
-uiWindowsControlAllDefaults(uiArea)
+static void uiAreaDestroy(uiControl *c)
+{
+	uiArea *a = uiArea(c);
+
+	uiWindowsEnsureDestroyWindow(a->hwnd);
+	releaseAreaRenderTarget(a);
+	uiFreeControl(uiControl(a));
+}
+
+uiWindowsControlAllDefaultsExceptDestroy(uiArea)
 
 static void uiAreaMinimumSize(uiWindowsControl *c, int *width, int *height)
 {
@@ -84,6 +108,8 @@ void unregisterArea(void)
 
 void uiAreaSetSize(uiArea *a, int width, int height)
 {
+	if (!a->scrolling)
+		uiprivUserBug("You cannot call uiAreaSetSize() on a non-scrolling uiArea. (area: %p)", a);
 	a->scrollWidth = width;
 	a->scrollHeight = height;
 	areaUpdateScroll(a);
@@ -97,15 +123,20 @@ void uiAreaQueueRedrawAll(uiArea *a)
 
 void uiAreaScrollTo(uiArea *a, double x, double y, double width, double height)
 {
-	// TODO
+	if (!a->scrolling)
+		uiprivUserBug("You cannot call uiAreaScrollTo() on a non-scrolling uiArea. (area: %p)", a);
+	areaScrollTo(a, x, y, width, height);
 }
 
 void uiAreaBeginUserWindowMove(uiArea *a)
 {
 	HWND toplevel;
 
-	// TODO restrict execution
-	ReleaseCapture();		// TODO use properly and reset internal data structures
+	if (!a->inMouseDownEvent)
+		uiprivUserBug("cannot call uiAreaBeginUserWindowMove() outside of a Mouse() with Down != 0");
+	a->capturing = FALSE;
+	if (ReleaseCapture() == 0)
+		logLastError(L"error releasing capture before user window move");
 	toplevel = parentToplevel(a->hwnd);
 	if (toplevel == NULL) {
 		// TODO
@@ -121,8 +152,11 @@ void uiAreaBeginUserWindowResize(uiArea *a, uiWindowResizeEdge edge)
 	HWND toplevel;
 	WPARAM wParam;
 
-	// TODO restrict execution
-	ReleaseCapture();		// TODO use properly and reset internal data structures
+	if (!a->inMouseDownEvent)
+		uiprivUserBug("cannot call uiAreaBeginUserWindowResize() outside of a Mouse() with Down != 0");
+	a->capturing = FALSE;
+	if (ReleaseCapture() == 0)
+		logLastError(L"error releasing capture before user window resize");
 	toplevel = parentToplevel(a->hwnd);
 	if (toplevel == NULL) {
 		// TODO

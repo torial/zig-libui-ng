@@ -9,16 +9,24 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 	COLORREF bgcolorref;
 	D2D1_COLOR_F bgcolor;
 	D2D1_MATRIX_3X2_F scrollTransform;
+	D2D1_RECT_F clipRect;
+	double clipLeft, clipTop, clipRight, clipBottom;
 
 	// no need to save or restore the graphics state to reset transformations;  it's handled by resetTarget() in draw.c, called during the following
 	dp.Context = newContext(rt);
 
 	loadAreaSize(a, rt, &(dp.AreaWidth), &(dp.AreaHeight));
 
-	dp.ClipX = clip->left;
-	dp.ClipY = clip->top;
-	dp.ClipWidth = clip->right - clip->left;
-	dp.ClipHeight = clip->bottom - clip->top;
+	clipLeft = clip->left;
+	clipTop = clip->top;
+	clipRight = clip->right;
+	clipBottom = clip->bottom;
+	pixelsToDIPWithRT(rt, &clipLeft, &clipTop);
+	pixelsToDIPWithRT(rt, &clipRight, &clipBottom);
+	dp.ClipX = clipLeft;
+	dp.ClipY = clipTop;
+	dp.ClipWidth = clipRight - clipLeft;
+	dp.ClipHeight = clipBottom - clipTop;
 	if (a->scrolling) {
 		dp.ClipX += a->hscrollpos;
 		dp.ClipY += a->vscrollpos;
@@ -36,9 +44,6 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 		rt->SetTransform(&scrollTransform);
 	}
 
-	// TODO push axis aligned clip
-
-	// TODO only clear the clip area
 	// TODO clear with actual background brush
 	bgcolorref = GetSysColor(COLOR_BTNFACE);
 	bgcolor.r = ((float) GetRValue(bgcolorref)) / 255.0;
@@ -48,13 +53,20 @@ static HRESULT doPaint(uiArea *a, ID2D1RenderTarget *rt, RECT *clip)
 	bgcolor.g = ((float) ((BYTE) ((bgcolorref & 0xFF00) >> 8))) / 255.0;
 	bgcolor.b = ((float) GetBValue(bgcolorref)) / 255.0;
 	bgcolor.a = 1.0;
+
+	clipRect.left = dp.ClipX;
+	clipRect.top = dp.ClipY;
+	clipRect.right = dp.ClipX + dp.ClipWidth;
+	clipRect.bottom = dp.ClipY + dp.ClipHeight;
+	rt->PushAxisAlignedClip(&clipRect, D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+
 	rt->Clear(&bgcolor);
 
 	(*(ah->Draw))(ah, a, &dp);
 
-	freeContext(dp.Context);
+	rt->PopAxisAlignedClip();
 
-	// TODO pop axis aligned clip
+	freeContext(dp.Context);
 
 	return rt->EndDraw(NULL, NULL);
 }
@@ -93,12 +105,14 @@ static void onWM_PAINT(uiArea *a)
 
 static void onWM_PRINTCLIENT(uiArea *a, HDC dc)
 {
-	ID2D1DCRenderTarget *rt;
+	ID2D1DCRenderTarget *rt = NULL;
 	RECT client;
 	HRESULT hr;
 
 	uiWindowsEnsureGetClientRect(a->hwnd, &client);
 	rt = makeHDCRenderTarget(dc, &client);
+	if (rt == NULL)
+		return;
 	hr = doPaint(a, rt, &client);
 	if (hr != S_OK)
 		logHRESULT(L"error printing uiArea client area", hr);
@@ -124,6 +138,9 @@ BOOL areaDoDraw(uiArea *a, UINT uMsg, WPARAM wParam, LPARAM lParam, LRESULT *lRe
 void areaDrawOnResize(uiArea *a, RECT *newClient)
 {
 	D2D1_SIZE_U size;
+
+	if (a->rt == NULL)
+		return;
 
 	size.width = newClient->right - newClient->left;
 	size.height = newClient->bottom - newClient->top;

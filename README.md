@@ -1,5 +1,27 @@
 # libui-ng: a portable GUI library for C
 
+---
+
+## Unofficial libui-ng Build by kojix2
+
+- This repository uses [GitHub Actions](.github/workflows/pre-build.yml) to build and distribute libui-ng binaries.
+- Our primary focus is on building and distribution rather than development. 
+- As a result, pre-build branches may be frequently rebased and force-pushed.
+- For details about the changes included in each build, please refer to the tags associated with each release.
+
+### See [Releases](https://github.com/kojix2/libui-ng/releases)
+
+- [pre-build branch](https://github.com/kojix2/libui-ng/tree/pre-build): `commit-xxxxxxx`
+  - Includes bug fixes for libui-ng
+- [dev branch](https://github.com/kojix2/libui-ng/tree/dev): `commit-xxxxxxx-experimental`
+  - Contains bug fixes for libui-ng as well as the new functions `uiImageView` and `uiDrawImage`.
+
+This project aims to eventually integrate changes back into the successor project to libui. 
+
+Please note that force pushes are often used to clean up the commit log.
+
+---
+
 Fork of [andlabs/libui](https://github.com/andlabs/libui). This README is being written.<br>
 [![Build Status, GitHub Actions](https://github.com/libui-ng/libui-ng/actions/workflows/build.yml/badge.svg)](https://github.com/libui-ng/libui-ng/actions/workflows/build.yml)
 [![GitLab](https://img.shields.io/badge/gitlab-%23181717.svg?style=for-the-badge&logo=gitlab&logoColor=white)](https://gitlab.com/libui-ng/libui-ng)
@@ -132,6 +154,7 @@ Other people have made bindings to other languages:
 
 Language | Bindings
 --- | ---
+Beef | [libui-beef](https://github.com/guofeiyu2022/libui-beef)
 C++ | [libui-cpp](https://github.com/billyquith/libui-cpp), [cpp-libui-qtlike](https://github.com/aoloe/cpp-libui-qtlike)
 C# / .NET Framework | [LibUI.Binding](https://github.com/NattyNarwhal/LibUI.Binding)
 C# / .NET Core | [DevZH.UI](https://github.com/noliar/DevZH.UI), [SharpUI](https://github.com/benpye/sharpui/)
@@ -156,6 +179,7 @@ Ruby | [libui-ruby](https://github.com/jamescook/libui-ruby), [LibUI](https://gi
 Rust | [libui-ng-sys](https://github.com/norepimorphism/libui-ng-sys), [boing](https://github.com/norepimorphism/boing), [libui-rs](https://github.com/rust-native-ui/libui-rs), [libui](https://github.com/libui-rs/libui)
 Scala | [scalaui](https://github.com/lolgab/scalaui)
 Swift | [libui-swift](https://github.com/sclukey/libui-swift)
+V | [v-uing](https://github.com/trufae/v-uing)
 Zig | [zig-libui-ng](https://github.com/desttinghim/zig-libui-ng)
 
 ## Frequently Asked Questions

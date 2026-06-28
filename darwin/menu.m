@@ -251,12 +251,7 @@ int uiMenuItemChecked(uiMenuItem *item)
 
 void uiMenuItemSetChecked(uiMenuItem *item, int checked)
 {
-	NSInteger state;
-
-	state = NSOffState;
-	if ([item->item state] == NSOffState)
-		state = NSOnState;
-	[item->item setState:state];
+	[item->item setState:checked ? NSOnState : NSOffState];
 }
 
 static uiMenuItem *newItem(uiMenu *m, int type, const char *name)
@@ -327,6 +322,8 @@ uiMenuItem *uiMenuAppendAboutItem(uiMenu *m)
 
 void uiMenuAppendSeparator(uiMenu *m)
 {
+	if ([uiprivAppDelegate().menuManager finalized])
+		uiprivUserBug("You can't create a new menu item after menus have been finalized.");
 	[m->menu addItem:[NSMenuItem separatorItem]];
 }
 

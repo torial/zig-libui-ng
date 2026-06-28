@@ -241,6 +241,69 @@ static gboolean rowcolEqual(gconstpointer a, gconstpointer b)
 	return (ra->row == rb->row) && (ra->col == rb->col);
 }
 
+static void insertIndeterminateProgress(GHashTable *positions, int row, int col, gint pulse)
+{
+	struct rowcol *rc;
+	gint *val;
+
+	rc = uiprivNew(struct rowcol);
+	rc->row = row;
+	rc->col = col;
+	val = uiprivNew(gint);
+	*val = pulse;
+	g_hash_table_insert(positions, rc, val);
+}
+
+void uiprivTableRowInserted(uiTable *t, int newIndex)
+{
+	GHashTable *shifted;
+	GHashTableIter iter;
+	gpointer key, value;
+	struct rowcol *rc;
+
+	shifted = g_hash_table_new_full(rowcolHash, rowcolEqual,
+		uiprivFree, uiprivFree);
+	g_hash_table_iter_init(&iter, t->indeterminatePositions);
+	while (g_hash_table_iter_next(&iter, &key, &value)) {
+		rc = (struct rowcol *) key;
+		insertIndeterminateProgress(shifted,
+			rc->row >= newIndex ? rc->row + 1 : rc->row,
+			rc->col,
+			*((gint *) value));
+	}
+	g_hash_table_destroy(t->indeterminatePositions);
+	t->indeterminatePositions = shifted;
+}
+
+void uiprivTableRowDeleted(uiTable *t, int oldIndex)
+{
+	GHashTable *shifted;
+	GHashTableIter iter;
+	gpointer key, value;
+	struct rowcol *rc;
+	gboolean wasRunning;
+
+	wasRunning = g_hash_table_size(t->indeterminatePositions) != 0;
+	shifted = g_hash_table_new_full(rowcolHash, rowcolEqual,
+		uiprivFree, uiprivFree);
+	g_hash_table_iter_init(&iter, t->indeterminatePositions);
+	while (g_hash_table_iter_next(&iter, &key, &value)) {
+		rc = (struct rowcol *) key;
+		if (rc->row == oldIndex)
+			continue;
+		insertIndeterminateProgress(shifted,
+			rc->row > oldIndex ? rc->row - 1 : rc->row,
+			rc->col,
+			*((gint *) value));
+	}
+	g_hash_table_destroy(t->indeterminatePositions);
+	t->indeterminatePositions = shifted;
+	if (wasRunning && g_hash_table_size(t->indeterminatePositions) == 0) {
+		g_source_remove(t->indeterminateTimer);
+		t->indeterminateTimer = 0;
+	}
+}
+
 static void pulseOne(gpointer key, gpointer value, gpointer data)
 {
 	uiTable *t = uiTable(data);
@@ -408,6 +471,19 @@ static void defaultOnSelectionChanged(uiTable *table, void *data)
 	// do nothing
 }
 
+static void freeSelectedRows(GList *rows)
+{
+	g_list_free_full(rows, (GDestroyNotify) gtk_tree_path_free);
+}
+
+static void setLastSelectedRows(uiTable *t, GList *rows, gint rowCount)
+{
+	if (t->lastSelectedRows != NULL)
+		freeSelectedRows(t->lastSelectedRows);
+	t->lastSelectedRows = rows;
+	t->lastSelectedRowsCount = rowCount;
+}
+
 /**
  * Determines if a selection truly changed.
  *
@@ -444,21 +520,20 @@ static gboolean selectionChanged(uiTable *t, GtkTreeSelection *s)
 		}
 	}
 	else if (gtk_tree_selection_get_mode(s) == GTK_SELECTION_MULTIPLE) {
-		rowCount = gtk_tree_selection_count_selected_rows(s);
+		list = gtk_tree_selection_get_selected_rows(s, &m);
+		rowCount = g_list_length(list);
 		if (rowCount != t->lastSelectedRowsCount) {
-			t->lastSelectedRowsCount = rowCount;
+			setLastSelectedRows(t, list, rowCount);
+			return TRUE;
 		}
-		else {
-			list = gtk_tree_selection_get_selected_rows(s, &m);
-			for (a = list, b = t->lastSelectedRows; a != NULL && b != NULL; a = a->next, b = b->next) {
-				if (gtk_tree_path_compare(a->data, b->data) != 0) {
-					g_list_free_full(t->lastSelectedRows, (GDestroyNotify)gtk_tree_path_free);
-					t->lastSelectedRows = list;
-					return TRUE;
-				}
+		for (a = list, b = t->lastSelectedRows; a != NULL && b != NULL; a = a->next, b = b->next) {
+			if (gtk_tree_path_compare(a->data, b->data) != 0) {
+				setLastSelectedRows(t, list, rowCount);
+				return TRUE;
 			}
-			return FALSE;
 		}
+		freeSelectedRows(list);
+		return FALSE;
 	}
 	return TRUE;
 }
@@ -695,6 +770,7 @@ static void uiTableDestroy(uiControl *c)
 	uiTable *t = uiTable(c);
 	guint i;
 
+	g_ptr_array_remove(t->model->tables, t);
 	for (i = 0; i < t->columnParams->len; i++)
 		uiprivFree(g_ptr_array_index(t->columnParams, i));
 	g_ptr_array_free(t->columnParams, TRUE);
@@ -702,7 +778,7 @@ static void uiTableDestroy(uiControl *c)
 		g_source_remove(t->indeterminateTimer);
 	g_hash_table_destroy(t->indeterminatePositions);
 	if (t->lastSelectedRows != NULL)
-		g_list_free_full(t->lastSelectedRows, (GDestroyNotify)gtk_tree_path_free);
+		freeSelectedRows(t->lastSelectedRows);
 	g_object_unref(t->widget);
 	uiFreeControl(uiControl(t));
 }
@@ -824,7 +900,11 @@ uiTable *uiNewTable(uiTableParams *p)
 	selection = gtk_tree_view_get_selection(t->tv);
 	t->onSelectionChangedSignal = g_signal_connect(G_OBJECT(selection), "changed",
 		G_CALLBACK(onSelectionChanged), t);
+	t->lastSelectedRow = -1;
 	t->lastSelectedRows = NULL;
+	t->lastSelectedRowsCount = 0;
+
+	g_ptr_array_add(t->model->tables, t);
 
 	return t;
 }
@@ -864,7 +944,6 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 {
 	GtkTreeSelection *selection = gtk_tree_view_get_selection(t->tv);
 	GtkSelectionMode type;
-	GtkTreeModel *m = GTK_TREE_MODEL(t->model);
 
 	g_signal_handler_block(selection, t->onSelectionChangedSignal);
 	switch (mode) {
@@ -886,17 +965,16 @@ void uiTableSetSelectionMode(uiTable *t, uiTableSelectionMode mode)
 			type = GTK_SELECTION_BROWSE;
 			break;
 		case uiTableSelectionModeZeroOrMany:
-			t->lastSelectedRowsCount = gtk_tree_selection_count_selected_rows(selection);
-			t->lastSelectedRows = gtk_tree_selection_get_selected_rows(selection, &m);
 			type = GTK_SELECTION_MULTIPLE;
 			break;
 		default:
+			g_signal_handler_unblock(selection, t->onSelectionChangedSignal);
 			uiprivUserBug("Invalid table selection mode %d", mode);
 			return;
 	}
 
+	setLastSelectedRows(t, NULL, 0);
 	gtk_tree_selection_set_mode(selection, type);
 	selectionChanged(t, selection);
 	g_signal_handler_unblock(selection, t->onSelectionChangedSignal);
 }
-

@@ -130,10 +130,13 @@ static void setActive(uiprivDateTimePickerWidget *d, gboolean active)
 // like startGrab() below, a lot of this is in the order that GtkComboBox does it
 static void endGrab(uiprivDateTimePickerWidget *d)
 {
+	// This can be called during teardown even when no popup grab is active.
 	if (d->keyboard != NULL)
 		gdk_device_ungrab(d->keyboard, GDK_CURRENT_TIME);
-	gdk_device_ungrab(d->mouse, GDK_CURRENT_TIME);
-	gtk_device_grab_remove(d->window, d->mouse);
+	if (d->mouse != NULL) {
+		gdk_device_ungrab(d->mouse, GDK_CURRENT_TIME);
+		gtk_device_grab_remove(d->window, d->mouse);
+	}
 	d->keyboard = NULL;
 	d->mouse = NULL;
 }
@@ -194,7 +197,8 @@ static gboolean startGrab(uiprivDateTimePickerWidget *d)
 			return FALSE;
 		}
 
-	gtk_device_grab_add(d->window, mouse, TRUE);
+	if (mouse != NULL)
+		gtk_device_grab_add(d->window, mouse, TRUE);
 	d->keyboard = keyboard;
 	d->mouse = mouse;
 	return TRUE;
@@ -445,7 +449,8 @@ static void uiprivDateTimePickerWidget_setTime(uiprivDateTimePickerWidget *d, GD
 		if (hour >= 12) {
 			hour -= 12;
 			setRealSpinValue(GTK_SPIN_BUTTON(d->ampm), 1, d->ampmBlock);
-		}
+		} else
+			setRealSpinValue(GTK_SPIN_BUTTON(d->ampm), 0, d->ampmBlock);
 		setRealSpinValue(GTK_SPIN_BUTTON(d->hours), hour, d->hoursBlock);
 		setRealSpinValue(GTK_SPIN_BUTTON(d->minutes), g_date_time_get_minute(dt), d->minutesBlock);
 		setRealSpinValue(GTK_SPIN_BUTTON(d->seconds), g_date_time_get_seconds(dt), d->secondsBlock);
@@ -561,7 +566,20 @@ struct uiDateTimePicker {
 	gulong setBlock;
 };
 
-uiUnixControlAllDefaults(uiDateTimePicker)
+uiUnixControlAllDefaultsExceptDestroy(uiDateTimePicker)
+
+static void uiDateTimePickerDestroy(uiControl *c)
+{
+	uiDateTimePicker *d = uiDateTimePicker(c);
+
+	hidePopup(d->d);
+	if (d->setBlock != 0) {
+		g_signal_handler_disconnect(d->d, d->setBlock);
+		d->setBlock = 0;
+	}
+	g_object_unref(d->widget);
+	uiFreeControl(uiControl(d));
+}
 
 static void defaultOnChanged(uiDateTimePicker *d, void *data)
 {
