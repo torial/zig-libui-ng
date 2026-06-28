@@ -2942,6 +2942,15 @@ _UI_EXTERN void uiDrawTextLayoutExtents(uiDrawTextLayout *tl, double *width, dou
 // uiDrawBitmapUpdate() uploads new pixel data (must match dimensions).
 // uiDrawBitmapDraw() blits srcrect -> dstrect; filter: 0=nearest, 1=bilinear.
 // uiDrawFreeBitmap() releases the bitmap.
+// uiRect is the integer pixel rectangle used by the blit API (from petabyt/libui-dev). It was
+// referenced by uiDrawBitmapDraw() below but its definition was never vendored in alongside it.
+typedef struct uiRect uiRect;
+struct uiRect {
+	int x;
+	int y;
+	int width;
+	int height;
+};
 typedef struct uiDrawBitmap uiDrawBitmap;
 _UI_EXTERN uiDrawBitmap *uiDrawNewBitmap(uiDrawContext *c, int width, int height);
 _UI_EXTERN void uiDrawBitmapUpdate(uiDrawBitmap *bmp, const void *data);
