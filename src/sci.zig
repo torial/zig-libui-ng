@@ -22,7 +22,12 @@ pub const Scintilla = opaque {
     }
 
     pub fn as_control(self: *Scintilla) *ui.Control {
-        return @ptrCast(self);
+        // Scintilla is `opaque` (alignment 1); Control has alignment 8. Zig 0.16
+        // requires an explicit @alignCast to widen the pointer alignment — the
+        // other widget bindings (ui.zig) all use this @ptrCast(@alignCast(...))
+        // form. This path is only compiled when a program references a code
+        // editor, so the missing @alignCast stayed latent until first use.
+        return @ptrCast(@alignCast(self));
     }
 };
 
