@@ -186,6 +186,7 @@ pub const Box = layout.Box;
 pub const Grid = layout.Grid;
 pub const Group = layout.Group;
 pub const Seperator = layout.Seperator;
+pub const Separator = layout.Separator;
 pub const Tab = layout.Tab;
 
 pub const button = @import("button.zig");

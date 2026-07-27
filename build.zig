@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub fn build(b: *std.Build) !void {
+pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
@@ -14,77 +14,79 @@ pub fn build(b: *std.Build) !void {
     });
     ui_module.linkLibrary(libui.artifact("ui"));
 
-    const ui_extras_module = b.addModule("ui-extras", .{
-        .root_source_file = b.path("src/extras.zig"),
-        .imports = &.{.{
-            .name = "ui",
-            .module = ui_module,
-        }},
+    // Scintilla + libui-scintilla static library
+    const sci_c = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+    });
+    sci_c.link_libc = true;
+    sci_c.link_libcpp = true;
+    sci_c.addIncludePath(b.path("scintilla/include"));
+    sci_c.addIncludePath(b.path("scintilla/src"));
+    sci_c.addIncludePath(libui.path("."));
+    sci_c.addIncludePath(b.path("libui_scintilla/include"));
+
+    if (target.result.os.tag == .windows) {
+        sci_c.addIncludePath(b.path("scintilla/win32"));
+        sci_c.addCSourceFiles(.{
+            .files = &scintilla_win_sources,
+            .flags = &.{"-std=c++17"},
+        });
+        sci_c.linkSystemLibrary("imm32", .{});
+    }
+    sci_c.linkLibrary(libui.artifact("ui"));
+
+    const sci_lib = b.addLibrary(.{
+        .name = "sci_native",
+        .root_module = sci_c,
+        .linkage = .static,
     });
 
-    const check_step = b.step("check", "Build all examples");
-    const is_dynamic = false;
-
-    inline for (examples, uses_extras) |example_name, use_extras| {
-        const module = b.createModule(.{
-            .root_source_file = b.path("examples/" ++ example_name ++ ".zig"),
-            .target = target,
-            .optimize = optimize,
-        });
-        module.addImport("ui", ui_module);
-
-        const exe = b.addExecutable(.{
-            .name = example_name,
-            .root_module = module,
-            .win32_manifest = b.path(
-                if (is_dynamic)
-                    "examples/example.manifest"
-                else
-                    "examples/example.static.manifest",
-            ),
-        });
-
-        if (use_extras) exe.root_module.addImport("ui-extras", ui_extras_module);
-        exe.subsystem = std.Target.SubSystem.Windows;
-
-        b.installArtifact(exe);
-
-        const run_cmd = b.addRunArtifact(exe);
-        run_cmd.step.dependOn(&exe.step);
-
-        const run_step = b.step("run-example-" ++ example_name, "Run the hello example app");
-        run_step.dependOn(&run_cmd.step);
-
-        check_step.dependOn(&exe.step);
-    }
+    const sci_module = b.addModule("sci", .{
+        .root_source_file = b.path("src/sci.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    sci_module.addImport("ui", ui_module);
+    sci_module.linkLibrary(sci_lib);
 }
 
-const examples = &[_][]const u8{
-    "hello",
-    "counter",
-    "timer",
-    "table",
-    "temperature-converter",
-    "flight-booker",
-    "table-mvc",
-    "draw",
-    "menu",
-    "crud",
-    "circle-drawer",
-    "grid",
-};
-
-const uses_extras = &[_]bool{
-    false,
-    false,
-    false,
-    true,
-    false,
-    false,
-    true,
-    false,
-    false,
-    false,
-    false,
-    false,
+const scintilla_win_sources = [_][]const u8{
+    "scintilla/src/AutoComplete.cxx",
+    "scintilla/src/CallTip.cxx",
+    "scintilla/src/CaseConvert.cxx",
+    "scintilla/src/CaseFolder.cxx",
+    "scintilla/src/CellBuffer.cxx",
+    "scintilla/src/ChangeHistory.cxx",
+    "scintilla/src/CharacterCategoryMap.cxx",
+    "scintilla/src/CharacterType.cxx",
+    "scintilla/src/CharClassify.cxx",
+    "scintilla/src/ContractionState.cxx",
+    "scintilla/src/DBCS.cxx",
+    "scintilla/src/Decoration.cxx",
+    "scintilla/src/Document.cxx",
+    "scintilla/src/EditModel.cxx",
+    "scintilla/src/Editor.cxx",
+    "scintilla/src/EditView.cxx",
+    "scintilla/src/Geometry.cxx",
+    "scintilla/src/Indicator.cxx",
+    "scintilla/src/KeyMap.cxx",
+    "scintilla/src/LineMarker.cxx",
+    "scintilla/src/MarginView.cxx",
+    "scintilla/src/PerLine.cxx",
+    "scintilla/src/PositionCache.cxx",
+    "scintilla/src/RESearch.cxx",
+    "scintilla/src/RunStyles.cxx",
+    "scintilla/src/ScintillaBase.cxx",
+    "scintilla/src/Selection.cxx",
+    "scintilla/src/Style.cxx",
+    "scintilla/src/UndoHistory.cxx",
+    "scintilla/src/UniConversion.cxx",
+    "scintilla/src/UniqueString.cxx",
+    "scintilla/src/ViewStyle.cxx",
+    "scintilla/src/XPM.cxx",
+    "scintilla/win32/HanjaDic.cxx",
+    "scintilla/win32/PlatWin.cxx",
+    "scintilla/win32/ScintillaWin.cxx",
+    "libui_scintilla/win.cxx",
 };
