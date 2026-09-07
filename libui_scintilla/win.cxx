@@ -18,9 +18,41 @@ extern void uiprivDestroyTooltip(uiControl* c);
 struct uiScintilla {
 	struct uiWindowsControl c;
 	HWND hwnd;
+	void (*onNotify)(uiScintilla *, SCNotification *, void *);
+	void *onNotifyData;
 };
 
-uiWindowsControlAllDefaults(uiScintilla);
+// Notifications. Scintilla sends WM_NOTIFY to its PARENT; libui-ng already routes
+// every container's WM_NOTIFY to a per-child-HWND handler (windows/events.cpp,
+// uiWindowsRegisterWM_NOTIFYHandler — the same hook uiTab and uiTable use), so
+// no subclassing is needed: register once at creation, forward the SCNotification
+// to whoever asked. shouldRun() in events.cpp ignores children of the utility
+// window, which is exactly right: before the control is parented into a box no
+// user can be listening.
+static BOOL onWM_NOTIFY(uiControl *c, HWND hwnd, NMHDR *nmhdr, LRESULT *lResult)
+{
+	uiScintilla *s = uiScintilla(c);
+	if (s->onNotify != NULL)
+		(*(s->onNotify))(s, reinterpret_cast<SCNotification *>(nmhdr), s->onNotifyData);
+	*lResult = 0;
+	return TRUE;
+}
+
+static void uiScintillaDestroy(uiControl *c)
+{
+	uiScintilla *s = uiScintilla(c);
+	uiWindowsUnregisterWM_NOTIFYHandler(s->hwnd);
+	uiWindowsEnsureDestroyWindow(s->hwnd);
+	uiFreeControl(uiControl(s));
+}
+
+uiWindowsControlAllDefaultsExceptDestroy(uiScintilla);
+
+_UI_EXTERN void uiScintillaOnNotify(uiScintilla *s, void (*f)(uiScintilla *, SCNotification *, void *), void *data)
+{
+	s->onNotify = f;
+	s->onNotifyData = data;
+}
 
 static void uiScintillaMinimumSize(uiWindowsControl *c, int *width, int *height) {
 	*width = 100;
@@ -40,6 +72,9 @@ _UI_EXTERN uiScintilla *uiNewScintilla() {
 	s->hwnd = CreateWindowEx(0,
 		"Scintilla", "Source", WS_CHILD | WS_VISIBLE | WS_TABSTOP,
 		0, 0, 100, 100, utilWindow, NULL, hInstance, NULL);
+	s->onNotify = NULL;
+	s->onNotifyData = NULL;
+	uiWindowsRegisterWM_NOTIFYHandler(s->hwnd, onWM_NOTIFY, uiControl(s));
 
 	return s;
 }
