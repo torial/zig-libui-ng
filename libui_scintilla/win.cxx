@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include <richedit.h>
+#include <commctrl.h>
 #include <ui.h>
 #include <Scintilla.h>
 #include <ScintillaTypes.h>
@@ -20,7 +21,59 @@ struct uiScintilla {
 	HWND hwnd;
 	void (*onNotify)(uiScintilla *, SCNotification *, void *);
 	void *onNotifyData;
+	int (*onKey)(uiScintilla *, int, int, void *);
+	void *onKeyData;
+	int swallowChar;
 };
+
+// Keys. Windows delivers WM_KEYDOWN to the focused window, i.e. to Scintilla
+// itself, so nothing in libui-ng sees it; a window subclass (SetWindowSubclass,
+// comctl32) is the standard way to look first. The handler is asked with the
+// virtual key and the modifier state; returning nonzero CONSUMES the key — and
+// the WM_CHAR that follows a consumed Ctrl+letter, which would otherwise insert
+// the control character (Scintilla adds a control char when the key-down was
+// not consumed by it: ScintillaWin.cxx, WM_CHAR + lastKeyDownConsumed).
+#define uiScintillaKeyCtrl  1
+#define uiScintillaKeyShift 2
+#define uiScintillaKeyAlt   4
+
+static LRESULT CALLBACK sciSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	uiScintilla *s = reinterpret_cast<uiScintilla *>(dwRefData);
+	switch (uMsg) {
+	case WM_KEYDOWN:
+	case WM_SYSKEYDOWN:
+		if (s->onKey != NULL) {
+			int mods = 0;
+			if (GetKeyState(VK_CONTROL) & 0x8000) mods |= uiScintillaKeyCtrl;
+			if (GetKeyState(VK_SHIFT) & 0x8000) mods |= uiScintillaKeyShift;
+			if (GetKeyState(VK_MENU) & 0x8000) mods |= uiScintillaKeyAlt;
+			if ((*(s->onKey))(s, (int) wParam, mods, s->onKeyData)) {
+				s->swallowChar = 1;
+				return 0;
+			}
+		}
+		s->swallowChar = 0;
+		break;
+	case WM_CHAR:
+	case WM_SYSCHAR:
+		if (s->swallowChar) {
+			s->swallowChar = 0;
+			return 0;
+		}
+		break;
+	case WM_NCDESTROY:
+		RemoveWindowSubclass(hwnd, sciSubclassProc, uIdSubclass);
+		break;
+	}
+	return DefSubclassProc(hwnd, uMsg, wParam, lParam);
+}
+
+_UI_EXTERN void uiScintillaOnKey(uiScintilla *s, int (*f)(uiScintilla *, int, int, void *), void *data)
+{
+	s->onKey = f;
+	s->onKeyData = data;
+}
 
 // Notifications. Scintilla sends WM_NOTIFY to its PARENT; libui-ng already routes
 // every container's WM_NOTIFY to a per-child-HWND handler (windows/events.cpp,
@@ -74,7 +127,11 @@ _UI_EXTERN uiScintilla *uiNewScintilla() {
 		0, 0, 100, 100, utilWindow, NULL, hInstance, NULL);
 	s->onNotify = NULL;
 	s->onNotifyData = NULL;
+	s->onKey = NULL;
+	s->onKeyData = NULL;
+	s->swallowChar = 0;
 	uiWindowsRegisterWM_NOTIFYHandler(s->hwnd, onWM_NOTIFY, uiControl(s));
+	SetWindowSubclass(s->hwnd, sciSubclassProc, 1, reinterpret_cast<DWORD_PTR>(s));
 
 	return s;
 }
