@@ -62,6 +62,15 @@ static LRESULT CALLBACK sciSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPA
 			return 0;
 		}
 		break;
+	// The flag must not outlive the keystroke that armed it: a consumed F-key
+	// produces no WM_CHAR, and an armed flag would then eat the next WM_CHAR
+	// that arrives WITHOUT a key-down through this subclass (an IME commit, an
+	// injected WM_CHAR). Refuter finding, 2026-09-08 (harness case 5).
+	case WM_KEYUP:
+	case WM_SYSKEYUP:
+	case WM_KILLFOCUS:
+		s->swallowChar = 0;
+		break;
 	case WM_NCDESTROY:
 		RemoveWindowSubclass(hwnd, sciSubclassProc, uIdSubclass);
 		break;
@@ -162,7 +171,11 @@ unsigned int uiScintillaGetLength(uiScintilla *s) {
 
 char *uiScintillaText(uiScintilla *s) {
 	unsigned int len = uiScintillaGetLength(s);
-	char *text = (char *)malloc((size_t)len);
+	// Scintilla's GetTextRange writes a NUL at buffer[len] (Editor.cxx, "Spec says copied
+	// text is terminated with a NUL"): the buffer needs len + 1. Pre-existing one-byte
+	// heap overflow on every call; refuter bycatch, 2026-09-08.
+	char *text = (char *)malloc((size_t)len + 1);
 	uiScintillaGetRange(s, 0, len, text);
+	text[len] = '\0';
 	return text;
 }
