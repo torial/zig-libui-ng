@@ -290,6 +290,22 @@ void uiTabDelete(uiTab *t, int n)
 	tabRelayout(t);
 }
 
+char *uiTabName(uiTab *t, int n)
+{
+	NSTabViewItem *i;
+
+	i = [t->tabview tabViewItemAtIndex:n];
+	return uiDarwinNSStringToText([i label]);
+}
+
+void uiTabSetName(uiTab *t, int n, const char *name)
+{
+	NSTabViewItem *i;
+
+	i = [t->tabview tabViewItemAtIndex:n];
+	[i setLabel:uiprivToNSString(name)];
+}
+
 int uiTabNumPages(uiTab *t)
 {
 	return [t->pages count];

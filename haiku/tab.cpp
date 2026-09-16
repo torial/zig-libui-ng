@@ -126,6 +126,26 @@ void uiTabDelete(uiTab *t, int index)
 	if (win != NULL) win->Unlock();
 }
 
+char *uiTabName(uiTab *t, int index)
+{
+	BTab *tb = t->view->TabAt(index);
+	if (tb == NULL)
+		return uiHaikuStrdupText("");
+	return uiHaikuStrdupText(tb->Label());
+}
+
+void uiTabSetName(uiTab *t, int index, const char *name)
+{
+	BTab *tb = t->view->TabAt(index);
+	if (tb == NULL)
+		return;
+	BWindow *win = t->view->Window();
+	if (win != NULL) win->Lock();
+	tb->SetLabel(name);
+	t->view->Invalidate();
+	if (win != NULL) win->Unlock();
+}
+
 int uiTabNumPages(uiTab *t)
 {
 	return (int) t->pages->CountItems();

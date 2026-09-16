@@ -258,6 +258,37 @@ void uiTabDelete(uiTab *t, int n)
 	t->pages->erase(t->pages->begin() + n);
 }
 
+char *uiTabName(uiTab *t, int n)
+{
+	TCITEMW item;
+	WCHAR wname[512];
+
+	ZeroMemory(&item, sizeof (TCITEMW));
+	item.mask = TCIF_TEXT;
+	item.pszText = wname;
+	item.cchTextMax = 512;
+	wname[0] = L'\0';
+	if (SendMessageW(t->tabHWND, TCM_GETITEMW, (WPARAM) n, (LPARAM) (&item)) == FALSE)
+		logLastError(L"error getting uiTab tab name");
+	return toUTF8(wname);
+}
+
+void uiTabSetName(uiTab *t, int n, const char *name)
+{
+	TCITEMW item;
+	WCHAR *wname;
+
+	ZeroMemory(&item, sizeof (TCITEMW));
+	item.mask = TCIF_TEXT;
+	wname = toUTF16(name);
+	item.pszText = wname;
+	if (SendMessageW(t->tabHWND, TCM_SETITEMW, (WPARAM) n, (LPARAM) (&item)) == FALSE)
+		logLastError(L"error setting uiTab tab name");
+	uiprivFree(wname);
+	// a wider or narrower label changes the strip height on some themes
+	tabArrangePages(t);
+}
+
 int uiTabNumPages(uiTab *t)
 {
 	return t->pages->size();

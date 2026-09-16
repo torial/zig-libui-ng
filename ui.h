@@ -1010,6 +1010,31 @@ _UI_EXTERN void uiTabInsertAt(uiTab *t, const char *name, int index, uiControl *
 _UI_EXTERN void uiTabDelete(uiTab *t, int index);
 
 /**
+ * Returns the label of the tab at @p index.
+ *
+ * @param t uiTab instance.
+ * @param index Index of the tab.
+ * @returns The tab label. Data is owned by the caller; free with uiFreeText().
+ * @memberof uiTab
+ */
+_UI_EXTERN char *uiTabName(uiTab *t, int index);
+
+/**
+ * Sets the label of the tab at @p index.
+ *
+ * Added in the torial fork (2026-09-16): upstream fixes a label at uiTabAppend /
+ * uiTabInsertAt, so a label that carries state (an editor's "name *" when dirty)
+ * could only change by deleting and re-inserting the page.
+ *
+ * @param t uiTab instance.
+ * @param index Index of the tab.
+ * @param name Tab label.\n
+ *             Data is copied internally. Ownership is not transferred.
+ * @memberof uiTab
+ */
+_UI_EXTERN void uiTabSetName(uiTab *t, int index, const char *name);
+
+/**
  * Returns the number of pages contained.
  *
  * @param t uiTab instance.

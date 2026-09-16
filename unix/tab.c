@@ -65,6 +65,22 @@ void uiTabDelete(uiTab *t, int n)
 	g_array_remove_index(t->pages, n);
 }
 
+char *uiTabName(uiTab *t, int n)
+{
+	uiprivChild *page;
+
+	page = g_array_index(t->pages, uiprivChild *, n);
+	return uiUnixStrdupText(gtk_notebook_get_tab_label_text(t->notebook, uiprivChildBox(page)));
+}
+
+void uiTabSetName(uiTab *t, int n, const char *name)
+{
+	uiprivChild *page;
+
+	page = g_array_index(t->pages, uiprivChild *, n);
+	gtk_notebook_set_tab_label_text(t->notebook, uiprivChildBox(page), name);
+}
+
 int uiTabNumPages(uiTab *t)
 {
 	return t->pages->len;
