@@ -227,7 +227,7 @@ pub const Tab = opaque {
     }
 
     pub extern fn uiTabAppend(t: *Tab, name: [*:0]const u8, c: *Control) void;
-    pub extern fn uiTabInsertAt(t: *Tab, name: [*:0]const u8, index: c_int, c: [*:0]Control) void;
+    pub extern fn uiTabInsertAt(t: *Tab, name: [*:0]const u8, index: c_int, c: *Control) void;
     pub extern fn uiTabDelete(t: *Tab, index: c_int) void;
     pub extern fn uiTabNumPages(t: *Tab) c_int;
     pub extern fn uiTabMargined(t: *Tab, index: c_int) c_int;
