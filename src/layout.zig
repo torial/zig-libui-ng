@@ -233,11 +233,34 @@ pub const Tab = opaque {
     pub extern fn uiTabMargined(t: *Tab, index: c_int) c_int;
     pub extern fn uiTabSetMargined(t: *Tab, index: c_int, margined: c_int) void;
     pub extern fn uiNewTab() ?*Tab;
+    // Selection (upstream API, unbound until 2026-09-16) and label get/set (torial
+    // fork: uiTabSetName -- upstream fixes a label at Append). uiTabName's result is
+    // owned by the caller: ui.FreeText it.
+    pub extern fn uiTabSelected(t: *Tab) c_int;
+    pub extern fn uiTabSetSelected(t: *Tab, index: c_int) void;
+    pub extern fn uiTabOnSelected(t: *Tab, f: ?*const fn (*Tab, ?*anyopaque) callconv(.c) void, data: ?*anyopaque) void;
+    pub extern fn uiTabName(t: *Tab, index: c_int) [*:0]u8;
+    pub extern fn uiTabSetName(t: *Tab, index: c_int, name: [*:0]const u8) void;
 
     pub const Append = uiTabAppend;
     pub const InsertAt = uiTabInsertAt;
     pub const Delete = uiTabDelete;
     pub const NumPages = uiTabNumPages;
+    pub const Selected = uiTabSelected;
+    pub const SetSelected = uiTabSetSelected;
+    pub const Name = uiTabName;
+    pub const SetName = uiTabSetName;
+
+    pub fn OnSelected(self: *Tab, comptime T: type, comptime E: type, comptime f: *const fn (*Tab, ?*T) E!void, userdata: ?*T) void {
+        const callback = struct {
+            fn callback(tab_opt: ?*Tab, t_opt: ?*anyopaque) callconv(.c) void {
+                const err_ctx = ErrorContext{ .TabOnSelected = tab_opt };
+                const t = tab_opt orelse return error_handler(err_ctx, t_opt, error.LibUIPassedNullPointer);
+                f(t, @as(?*T, @ptrCast(@alignCast(t_opt)))) catch |err| error_handler(err_ctx, t_opt, err);
+            }
+        }.callback;
+        uiTabOnSelected(self, callback, userdata);
+    }
 
     pub fn Margined(t: *Tab, index: c_int) bool {
         return uiTabMargined(t, index) != 0;

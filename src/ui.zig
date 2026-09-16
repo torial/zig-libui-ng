@@ -49,6 +49,7 @@ pub const ErrorContext = union(enum) {
     TableOnRowClicked: ?*Table,
     TableOnRowDoubleClicked: ?*Table,
     TableOnSelectionChanged: ?*Table,
+    TabOnSelected: ?*Tab,
 };
 
 pub const Error = error{ LibUIPassedNullPointer, LibUINullUserdata };
