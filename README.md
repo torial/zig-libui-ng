@@ -9,6 +9,18 @@ Some helper functions have been made for writing event handlers.
 
 This library currently tracks the latest stable zig release `0.12.0`.  
 
+## This fork (torial)
+
+One repository since 2026-09-17: the C library lives here as `libui/` (a `git subtree`
+of torial/libui-ng, history kept; `git subtree pull --prefix=libui <remote> main` still
+brings upstream commits), wired as a path dependency in `build.zig.zon`, so a C change
+and its Zig binding land in one commit. Also here: Scintilla (`scintilla/`), the
+libui-scintilla shim (`libui_scintilla/`, the `sci` module), and additions upstream
+libui-ng does not have -- `uiTabName` / `uiTabSetName`, `uiScintillaOnNotify` /
+`uiScintillaOnKey`, a Haiku backend. Consumer: the Zebra language's `--gui-backend=libui_ng`
+(pinned by commit in its compiler; `tools/bump_libui_pin.sh` there after a push).
+Builds with zig 0.16.
+
 ## Example
 ```zig
 const std = @import("std");
