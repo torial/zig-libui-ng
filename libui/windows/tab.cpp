@@ -47,8 +47,10 @@ static void tabRelayout(uiTab *t)
 	uiWindowsEnsureGetClientRect(t->hwnd, &r);
 	uiWindowsEnsureMoveWindowDuringResize(t->tabHWND, r.left, r.top, r.right - r.left, r.bottom - r.top);
 
-	// then the current page
+	// then the current page (torial fork: none selected -> nothing to place)
 	if (t->pages->size() == 0)
+		return;
+	if (curpage(t) < 0 || curpage(t) >= (LRESULT) t->pages->size())
 		return;
 	page = tabPage(t, curpage(t));
 	tabPageRect(t, &r);
@@ -151,7 +153,9 @@ static void uiTabMinimumSize(uiWindowsControl *c, int *width, int *height)
 	// only consider the current page
 	pagewid = 0;
 	pageht = 0;
-	if (t->pages->size() != 0) {
+	// torial fork: with pages but NO selection (the selected page was just deleted)
+	// TCM_GETCURSEL is -1 and vector[-1] read the word before the buffer as a page.
+	if (t->pages->size() != 0 && curpage(t) >= 0 && curpage(t) < (LRESULT) t->pages->size()) {
 		page = tabPage(t, curpage(t));
 		tabPageMinimumSize(page, &pagewid, &pageht);
 	}
@@ -259,6 +263,15 @@ void uiTabDelete(uiTab *t, int n)
 		uiControlSetParent(page->child, NULL);
 	tabPageDestroy(page);
 	t->pages->erase(t->pages->begin() + n);
+	// torial fork: deleting the selected page left NO selection (Win32 semantics);
+	// select a neighbour like GTK's notebook does, so the strip never shows nothing.
+	if (t->pages->size() != 0 && curpage(t) < 0) {
+		int sel = n;
+		if (sel >= (int) t->pages->size())
+			sel = (int) t->pages->size() - 1;
+		SendMessageW(t->tabHWND, TCM_SETCURSEL, (WPARAM) sel, 0);
+		showHidePage(t, sel, 0);
+	}
 	uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
 }
 
