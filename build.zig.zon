@@ -4,9 +4,6 @@
     .version = "0.1.0",
     .paths = .{""},
     .dependencies = .{
-        .libui = .{
-            .url = "git+https://github.com/torial/libui-ng?ref=main#85976bcdfdcfe70abd4b34a9e6c8ca54402ab9b3",
-            .hash = "N-V-__8AAJUpKQC_gvsKqMnq2StXzP7vXUVZ-2SFoxrur37u",
-        },
+        .libui = .{ .path = "libui" },
     },
 }
