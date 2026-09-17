@@ -51,6 +51,28 @@ void uiBoxAppend(uiBox *b, uiControl *child, int stretchy)
 	if (win != NULL) win->Unlock();
 }
 
+// torial fork: BGroupLayout can add at an index directly.
+void uiBoxInsertAt(uiBox *b, uiControl *child, int index, int stretchy)
+{
+	int32 n = b->children->CountItems();
+	if (index < 0) index = 0;
+	if (index > n) index = n;
+	BWindow *win = b->view->Window();
+	if (win != NULL) win->Lock();
+	uiControlSetParent(child, uiControl(b));
+	uiHaikuControlSetContainer(uiHaikuControl(child), b->view, 0);
+	b->children->AddItem(child, index);
+	// SetContainer appended the view; move its layout item to `index`
+	BLayoutItem *it = b->view->GroupLayout()->ItemAt(n);
+	if (it != NULL && index != n) {
+		b->view->GroupLayout()->RemoveItem(it);
+		b->view->GroupLayout()->AddItem(index, it);
+	}
+	if (!stretchy && it != NULL)
+		it->SetExplicitMaxSize(it->PreferredSize());
+	if (win != NULL) win->Unlock();
+}
+
 void uiBoxDelete(uiBox *b, int index)
 {
 	uiControl *child = (uiControl *) b->children->ItemAt(index);

@@ -37,6 +37,7 @@
 - (CGFloat)paddingAmount;
 - (void)establishOurConstraints;
 - (void)append:(uiControl *)c stretchy:(int)stretchy;
+- (void)insertAt:(int)index control:(uiControl *)c stretchy:(int)stretchy;
 - (void)delete:(int)n;
 - (int)numChildren;
 - (int)isPadded;
@@ -293,6 +294,27 @@ struct uiBox {
 	[bc release];		// we don't need the initial reference now
 }
 
+// torial fork: no reorder in the constraint layout; append, then re-append the tail.
+- (void)insertAt:(int)index control:(uiControl *)c stretchy:(int)stretchy
+{
+	int n, i;
+	NSMutableArray *tail;
+
+	n = (int) [self->children count];
+	if (index < 0) index = 0;
+	if (index > n) index = n;
+	tail = [NSMutableArray new];
+	for (i = n - 1; i >= index; i--) {
+		boxChild *bc = (boxChild *) [self->children objectAtIndex:i];
+		[tail insertObject:@[[NSValue valueWithPointer:bc.c], @(bc.stretchy)] atIndex:0];
+		[self delete:i];
+	}
+	[self append:c stretchy:stretchy];
+	for (NSArray *rec in tail)
+		[self append:(uiControl *) [rec[0] pointerValue] stretchy:[rec[1] intValue]];
+	[tail release];
+}
+
 - (void)delete:(int)n
 {
 	boxChild *bc;
@@ -436,6 +458,11 @@ void uiBoxAppend(uiBox *b, uiControl *c, int stretchy)
 	if (c == NULL)
 		uiprivUserBug("You cannot add NULL to a uiBox.");
 	[b->view append:c stretchy:stretchy];
+}
+
+void uiBoxInsertAt(uiBox *b, uiControl *c, int index, int stretchy)
+{
+	[b->view insertAt:index control:c stretchy:stretchy];
 }
 
 void uiBoxDelete(uiBox *b, int n)

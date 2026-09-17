@@ -263,6 +263,21 @@ void uiBoxAppend(uiBox *b, uiControl *c, int stretchy)
 	uiWindowsControlMinimumSizeChanged(uiWindowsControl(b));
 }
 
+void uiBoxInsertAt(uiBox *b, uiControl *c, int index, int stretchy)
+{
+	struct boxChild bc;
+
+	if (index < 0) index = 0;
+	if (index > (int) b->controls->size()) index = (int) b->controls->size();
+	bc.c = c;
+	bc.stretchy = stretchy;
+	uiControlSetParent(bc.c, uiControl(b));
+	uiWindowsControlSetParentHWND(uiWindowsControl(bc.c), b->hwnd);
+	b->controls->insert(b->controls->begin() + index, bc);
+	boxArrangeChildren(b);
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(b));
+}
+
 void uiBoxDelete(uiBox *b, int index)
 {
 	uiControl *c;

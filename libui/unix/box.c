@@ -88,6 +88,24 @@ void uiBoxAppend(uiBox *b, uiControl *c, int stretchy)
 	g_array_append_val(b->controls, bc);
 }
 
+// torial fork: append, then move the GTK child and the record to `index`.
+void uiBoxInsertAt(uiBox *b, uiControl *c, int index, int stretchy)
+{
+	struct boxChild bc;
+	guint n;
+
+	n = b->controls->len;
+	if (index < 0) index = 0;
+	if ((guint) index > n) index = (int) n;
+	uiBoxAppend(b, c, stretchy);
+	if ((guint) index == n)
+		return;
+	bc = g_array_index(b->controls, struct boxChild, n);
+	gtk_box_reorder_child(GTK_BOX(b->container), GTK_WIDGET(uiControlHandle(bc.c)), index);
+	g_array_remove_index(b->controls, n);
+	g_array_insert_val(b->controls, index, bc);
+}
+
 void uiBoxDelete(uiBox *b, int index)
 {
 	struct boxChild *bc;

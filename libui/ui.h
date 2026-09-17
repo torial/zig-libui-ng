@@ -694,6 +694,17 @@ _UI_EXTERN void uiBoxAppend(uiBox *b, uiControl *child, int stretchy);
 _UI_EXTERN int uiBoxNumChildren(uiBox *b);
 
 /**
+ * Inserts a control at @p index (torial fork, 2026-09-17: upstream has only Append).
+ *
+ * @param b uiBox instance.
+ * @param c Control to insert.
+ * @param index Position among the existing children; == uiBoxNumChildren appends.
+ * @param stretchy `TRUE` to stretch control, `FALSE` otherwise.
+ * @memberof uiBox
+ */
+_UI_EXTERN void uiBoxInsertAt(uiBox *b, uiControl *c, int index, int stretchy);
+
+/**
  * Removes the control at @p index from the box.
  *
  * @param b uiBox instance.

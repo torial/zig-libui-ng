@@ -38,6 +38,7 @@ pub const Box = opaque {
     pub extern fn uiBoxAppend(b: *Box, child: *Control, stretchy: Stretchy) void;
     pub extern fn uiBoxNumChildren(b: *Box) c_int;
     pub extern fn uiBoxDelete(b: *Box, index: c_int) void;
+    pub extern fn uiBoxInsertAt(b: *Box, c: *Control, index: c_int, stretchy: c_int) void;
     pub extern fn uiBoxPadded(b: *Box) c_int;
     pub extern fn uiBoxSetPadded(b: *Box, padded: c_int) void;
     pub extern fn uiNewHorizontalBox() ?*Box;
@@ -46,6 +47,9 @@ pub const Box = opaque {
     pub const Append = uiBoxAppend;
     pub const NumChildren = uiBoxNumChildren;
     pub const Delete = uiBoxDelete;
+    pub fn InsertAt(b: *Box, c: *Control, index: c_int, stretchy: Stretchy) void {
+        uiBoxInsertAt(b, c, index, @intFromEnum(stretchy));
+    }
 
     pub fn Padded(b: *Box) bool {
         return uiBoxPadded(b) != 0;
