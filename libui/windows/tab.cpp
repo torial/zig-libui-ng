@@ -239,6 +239,9 @@ void uiTabInsertAt(uiTab *t, const char *name, int n, uiControl *child)
 		showHidePage(t, hide, 1);
 		showHidePage(t, show, 0);
 	}
+	// torial fork: a page added without a selection change (a second page, or one
+	// inserted after the first layout) still changes the strip; tell the parent.
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
 }
 
 void uiTabDelete(uiTab *t, int n)
@@ -256,6 +259,7 @@ void uiTabDelete(uiTab *t, int n)
 		uiControlSetParent(page->child, NULL);
 	tabPageDestroy(page);
 	t->pages->erase(t->pages->begin() + n);
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
 }
 
 char *uiTabName(uiTab *t, int n)
@@ -285,8 +289,8 @@ void uiTabSetName(uiTab *t, int n, const char *name)
 	if (SendMessageW(t->tabHWND, TCM_SETITEMW, (WPARAM) n, (LPARAM) (&item)) == FALSE)
 		logLastError(L"error setting uiTab tab name");
 	uiprivFree(wname);
-	// a wider or narrower label changes the strip height on some themes
-	tabArrangePages(t);
+	// a wider or narrower label can change the strip; relayout from the parent
+	uiWindowsControlMinimumSizeChanged(uiWindowsControl(t));
 }
 
 int uiTabNumPages(uiTab *t)
