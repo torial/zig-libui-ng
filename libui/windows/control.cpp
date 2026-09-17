@@ -14,6 +14,17 @@ void uiWindowsControlSetParentHWND(uiWindowsControl *c, HWND parent)
 void uiWindowsControlMinimumSize(uiWindowsControl *c, int *width, int *height)
 {
 	(*(c->MinimumSize))(c, width, height);
+	// uiControlSetMinSize() hint, on top of the natural minimum (torial fork)
+	if (*width < uiControl(c)->MinWidth)
+		*width = uiControl(c)->MinWidth;
+	if (*height < uiControl(c)->MinHeight)
+		*height = uiControl(c)->MinHeight;
+}
+
+void uiprivControlMinSizeChanged(uiControl *c)
+{
+	if (uiControlParent(c) != NULL)
+		uiWindowsControlContinueMinimumSizeChanged(uiWindowsControl(c));
 }
 
 void uiWindowsControlMinimumSizeChanged(uiWindowsControl *c)

@@ -70,6 +70,23 @@ uiControl *uiAllocControl(size_t size, uint32_t OSsig, uint32_t typesig, const c
 	return c;
 }
 
+void uiControlSetMinSize(uiControl *c, int width, int height)
+{
+	if (width < 0)
+		width = 0;
+	if (height < 0)
+		height = 0;
+	c->MinWidth = width;
+	c->MinHeight = height;
+	uiprivControlMinSizeChanged(c);
+}
+
+void uiControlMinSize(uiControl *c, int *width, int *height)
+{
+	*width = c->MinWidth;
+	*height = c->MinHeight;
+}
+
 void uiFreeControl(uiControl *c)
 {
 	if (uiControlParent(c) != NULL)

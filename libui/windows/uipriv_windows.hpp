@@ -75,6 +75,7 @@ extern void setExStyle(HWND hwnd, DWORD exstyle);
 extern void clientSizeToWindowSize(HWND hwnd, int *width, int *height, BOOL hasMenubar);
 extern HWND parentOf(HWND child);
 extern HWND parentToplevel(HWND child);
+extern int uiprivWindowKeyFilter(HWND toplevel, MSG *msg);
 extern void setWindowInsertAfter(HWND hwnd, HWND insertAfter);
 extern HWND getDlgItem(HWND hwnd, int id);
 extern void invalidateRect(HWND hwnd, RECT *r, BOOL erase);

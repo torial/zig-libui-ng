@@ -13,6 +13,10 @@ pub const Control = extern struct {
     _Enabled: ?*const fn (*Control) callconv(.c) c_int,
     _Enable: ?*const fn (*Control) callconv(.c) void,
     _Disable: ?*const fn (*Control) callconv(.c) void,
+    // torial libui-ng fork: uiControlSetMinSize hint (0 = none), backend scratch.
+    MinWidth: c_int,
+    MinHeight: c_int,
+    MinSizeData: ?*anyopaque,
 
     pub extern fn uiControlDestroy(c: *Control) void;
     pub extern fn uiControlHandle(c: *Control) usize;
@@ -30,6 +34,8 @@ pub const Control = extern struct {
     pub extern fn uiControlVerifySetParent(c: *Control, parent: ?*Control) void;
     pub extern fn uiControlEnabledToUser(c: *Control) c_int;
     pub extern fn uiUserBugCannotSetParentOnToplevel(@"type": [*:0]const u8) void;
+    pub extern fn uiControlSetMinSize(c: *Control, width: c_int, height: c_int) void;
+    pub extern fn uiControlMinSize(c: *Control, width: *c_int, height: *c_int) void;
 
     pub const Destroy = uiControlDestroy;
     pub const Handle = uiControlHandle;
@@ -41,6 +47,8 @@ pub const Control = extern struct {
     pub const Disable = uiControlDisable;
     pub const Free = uiFreeControl;
     pub const VerifySetParent = uiControlVerifySetParent;
+    pub const SetMinSize = uiControlSetMinSize;
+    pub const MinSize = uiControlMinSize;
 
     pub fn Toplevel(c: *Control) bool {
         return uiControlToplevel(c) != 0;

@@ -82,3 +82,32 @@ void uiDarwinNotifyVisibilityChanged(uiDarwinControl *c)
 	if (parent != NULL)
 		uiDarwinControlChildVisibilityChanged(uiDarwinControl(parent));
 }
+
+// uiControlSetMinSize() hint (torial fork): two >= constraints on the control's
+// view, kept in MinSizeData so a second call replaces them.
+void uiprivControlMinSizeChanged(uiControl *c)
+{
+	NSView *view;
+	NSArray *old;
+	NSMutableArray *cons;
+
+	view = (NSView *) uiControlHandle(c);
+	if (view == nil)
+		return;
+	old = (NSArray *) c->MinSizeData;
+	if (old != nil) {
+		[NSLayoutConstraint deactivateConstraints:old];
+		[old release];
+		c->MinSizeData = NULL;
+	}
+	cons = [[NSMutableArray alloc] init];
+	if (c->MinWidth > 0)
+		[cons addObject:[[view widthAnchor] constraintGreaterThanOrEqualToConstant:c->MinWidth]];
+	if (c->MinHeight > 0)
+		[cons addObject:[[view heightAnchor] constraintGreaterThanOrEqualToConstant:c->MinHeight]];
+	if ([cons count] > 0) {
+		[NSLayoutConstraint activateConstraints:cons];
+		c->MinSizeData = cons;
+	} else
+		[cons release];
+}

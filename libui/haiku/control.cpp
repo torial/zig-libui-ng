@@ -21,3 +21,14 @@ BMessage *uiprivNewEventMessage(uiprivEventFn fn, void *control)
 	m->AddPointer("control", control);
 	return m;
 }
+
+// uiControlSetMinSize() hint (torial fork): BView explicit minimum; B_SIZE_UNSET clears.
+extern "C" void uiprivControlMinSizeChanged(uiControl *c)
+{
+	BView *v = (BView *) uiControlHandle(c);
+	if (v == NULL)
+		return;
+	v->SetExplicitMinSize(BSize(
+		c->MinWidth > 0 ? (float) c->MinWidth : B_SIZE_UNSET,
+		c->MinHeight > 0 ? (float) c->MinHeight : B_SIZE_UNSET));
+}

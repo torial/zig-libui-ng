@@ -36,6 +36,8 @@ extern void uiprivDoUserBug(const char *file, const char *line, const char *func
 
 // shouldquit.c
 extern int uiprivShouldQuit(void);
+// backend hook: the hint set by uiControlSetMinSize() changed; relayout.
+extern void uiprivControlMinSizeChanged(uiControl *c);
 
 // areaevents.c
 typedef struct uiprivClickCounter uiprivClickCounter;

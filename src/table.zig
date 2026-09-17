@@ -186,22 +186,25 @@ pub const Table = opaque {
     pub extern fn uiTableColumnWidth(t: *Table, column: c_int) c_int;
     pub extern fn uiTableColumnSetWidth(t: *Table, column: c_int, width: c_int) void;
 
-    pub fn OnRowClicked(self: *Self, comptime T: type, comptime E: type, comptime f: *const fn (*Self, ?*T) E!void, userdata: ?*T) void {
+    // The C callbacks carry the ROW (uiTableOnRowClicked(t, f(uiTable*, int row, void*)));
+    // until 2026-09-17 these wrappers dropped it and could not have compiled against
+    // the extern declarations above -- nothing had used them.
+    pub fn OnRowClicked(self: *Self, comptime T: type, comptime E: type, comptime f: *const fn (*Self, c_int, ?*T) E!void, userdata: ?*T) void {
         const callback = struct {
-            fn callback(self_opt: ?*Self, t_opt: ?*anyopaque) callconv(.c) void {
+            fn callback(self_opt: ?*Self, row: c_int, t_opt: ?*anyopaque) callconv(.c) void {
                 const err_ctx = ErrorContext{ .TableOnRowClicked = self_opt };
                 const s = self_opt orelse return error_handler(err_ctx, t_opt, error.LibUIPassedNullPointer);
-                f(s, @as(?*T, @ptrCast(@alignCast(t_opt)))) catch |err| error_handler(err_ctx, t_opt, err);
+                f(s, row, @as(?*T, @ptrCast(@alignCast(t_opt)))) catch |err| error_handler(err_ctx, t_opt, err);
             }
         }.callback;
         uiTableOnRowClicked(self, callback, userdata);
     }
-    pub fn OnRowDoubleClicked(self: *Self, comptime T: type, comptime E: type, f: *const fn (*Self, ?*T) E!void, userdata: ?*T) void {
+    pub fn OnRowDoubleClicked(self: *Self, comptime T: type, comptime E: type, comptime f: *const fn (*Self, c_int, ?*T) E!void, userdata: ?*T) void {
         const callback = struct {
-            fn callback(self_opt: ?*Self, t_opt: ?*anyopaque) callconv(.c) void {
+            fn callback(self_opt: ?*Self, row: c_int, t_opt: ?*anyopaque) callconv(.c) void {
                 const err_ctx = ErrorContext{ .TableOnRowDoubleClicked = self_opt };
                 const s = self_opt orelse return error_handler(err_ctx, t_opt, error.LibUIPassedNullPointer);
-                f(s, @as(?*T, @ptrCast(@alignCast(t_opt)))) catch |err| error_handler(err_ctx, t_opt, err);
+                f(s, row, @as(?*T, @ptrCast(@alignCast(t_opt)))) catch |err| error_handler(err_ctx, t_opt, err);
             }
         }.callback;
         uiTableOnRowDoubleClicked(self, callback, userdata);

@@ -116,9 +116,38 @@ struct uiControl {
 	int (*Enabled)(uiControl *);
 	void (*Enable)(uiControl *);
 	void (*Disable)(uiControl *);
+	// torial fork (2026-09-17): a minimum-size hint, 0 = none. Read by the layout
+	// of every backend on top of the control's natural minimum. See uiControlSetMinSize.
+	int MinWidth;
+	int MinHeight;
+	void *MinSizeData;
 };
 // TOOD add argument names to all arguments
 #define uiControl(this) ((uiControl *) (this))
+
+/**
+ * Sets a minimum size hint for the control, in points. 0 means no hint.
+ *
+ * Added in the torial fork (2026-09-17): upstream libui-ng has no size hints, so a
+ * pane in a box could not be given a width -- it fills its share of the parent.
+ * The hint is applied on top of the control's natural minimum; it never shrinks it.
+ *
+ * @param c uiControl instance.
+ * @param width Minimum width, or 0.
+ * @param height Minimum height, or 0.
+ * @memberof uiControl
+ */
+_UI_EXTERN void uiControlSetMinSize(uiControl *c, int width, int height);
+
+/**
+ * Returns the minimum size hint set with uiControlSetMinSize() (0, 0 when none).
+ *
+ * @param c uiControl instance.
+ * @param[out] width Minimum width hint.
+ * @param[out] height Minimum height hint.
+ * @memberof uiControl
+ */
+_UI_EXTERN void uiControlMinSize(uiControl *c, int *width, int *height);
 
 /**
  * Dispose and free all allocated resources.
@@ -430,6 +459,39 @@ _UI_EXTERN void uiWindowOnContentSizeChanged(uiWindow *w,
  */
 _UI_EXTERN void uiWindowOnClosing(uiWindow *w,
 	int (*f)(uiWindow *sender, void *senderData), void *data);
+
+/**
+ * Key modifier bits passed to uiWindowOnKey() callbacks.
+ * (Same values as the libui-scintilla shim's uiScintillaKey* bits.)
+ */
+#define uiWindowKeyCtrl 1
+#define uiWindowKeyShift 2
+#define uiWindowKeyAlt 4
+
+/**
+ * Registers a callback that sees every key-down aimed at the window or any
+ * control inside it, BEFORE the focused control does.
+ *
+ * Added in the torial fork (2026-09-17). Window-wide shortcuts (Ctrl+S with the
+ * focus anywhere) had no home: libui-ng only exposes keys on uiArea, and the
+ * scintilla shim only inside the editor.
+ *
+ * @param w uiWindow instance.
+ * @param f Callback function.\n
+ *          @p sender Back reference to the instance that triggered the callback.\n
+ *          @p vk The platform virtual-key code (Windows VK_*).\n
+ *          @p mods Bitmask of uiWindowKeyCtrl / uiWindowKeyShift / uiWindowKeyAlt.\n
+ *          @p senderData User data registered with the sender instance.\n
+ *          Return non-zero to CONSUME the key (no control sees it, and no character
+ *          is generated from it), zero to let it through.
+ * @param data User data to be passed to the callback.
+ * @note Windows fires it; the unix, darwin and haiku backends store the callback
+ *       but do not fire it yet.
+ * @note Only one callback can be registered at a time.
+ * @memberof uiWindow
+ */
+_UI_EXTERN void uiWindowOnKey(uiWindow *w,
+	int (*f)(uiWindow *sender, int vk, int mods, void *senderData), void *data);
 
 /**
  * Registers a callback for when the window focus changes.

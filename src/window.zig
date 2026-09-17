@@ -18,6 +18,7 @@ pub const Window = opaque {
     pub extern fn uiWindowOnContentSizeChanged(w: *Window, f: ?*const fn (*Window, ?*anyopaque) callconv(.c) void, data: ?*anyopaque) void;
     pub extern fn uiWindowOnClosing(w: *Window, f: ?*const fn (*Window, ?*anyopaque) callconv(.c) Window.ClosingAction, data: ?*anyopaque) void;
     pub extern fn uiWindowOnFocusChanged(w: *Window, f: ?*const fn (*Window, ?*anyopaque) callconv(.c) void, data: ?*anyopaque) void;
+    pub extern fn uiWindowOnKey(w: *Window, f: ?*const fn (?*Window, c_int, c_int, ?*anyopaque) callconv(.c) c_int, data: ?*anyopaque) void;
     pub extern fn uiWindowFocused(w: *Window) c_int;
     pub extern fn uiWindowBorderless(w: *Window) c_int;
     pub extern fn uiWindowSetBorderless(w: *Window, borderless: c_int) void;
@@ -157,6 +158,27 @@ pub const Window = opaque {
     /// and the handler should call `ui.Quit()` then return `.should_close`. If you need to
     /// run cleanup code on a window level construct (for example, a document), this is a
     /// good place to handle it.
+    /// Key modifier bits for OnKey (same values as the scintilla shim's KeyMods).
+    pub const KeyMods = struct {
+        pub const ctrl: c_int = 1;
+        pub const shift: c_int = 2;
+        pub const alt: c_int = 4;
+    };
+
+    /// See every key-down aimed at the window or a control in it BEFORE the focused
+    /// control does (torial libui-ng fork; fires on Windows). `f` returns true to
+    /// CONSUME the key -- no control sees it and no character comes of it -- false
+    /// to let it through. `vk` is the platform virtual-key code (Windows VK_*).
+    pub fn OnKey(window: *Window, comptime T: type, comptime f: *const fn (*Window, c_int, c_int, ?*T) bool, userdata: ?*T) void {
+        const callback = struct {
+            fn callback(w_opt: ?*Window, vk: c_int, mods: c_int, t_opt: ?*anyopaque) callconv(.c) c_int {
+                const w = w_opt orelse return 0;
+                return if (f(w, vk, mods, @as(?*T, @ptrCast(@alignCast(t_opt))))) 1 else 0;
+            }
+        }.callback;
+        uiWindowOnKey(window, callback, userdata);
+    }
+
     pub fn OnClosing(window: *Window, comptime T: type, comptime E: type, comptime f: *const fn (*Window, ?*T) E!ClosingAction, userdata: ?*T) void {
         const callback = struct {
             fn callback(window_opt: ?*Window, t_opt: ?*anyopaque) callconv(.c) ClosingAction {

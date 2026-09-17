@@ -21,6 +21,8 @@ struct uiWindow {
 
 	int (*onClosing)(uiWindow *, void *);
 	void *onClosingData;
+	int (*onKey)(uiWindow *, int, int, void *);
+	void *onKeyData;
 	void (*onContentSizeChanged)(uiWindow *, void *);
 	void *onContentSizeChangedData;
 	void (*onFocusChanged)(uiWindow *, void *);
@@ -424,6 +426,36 @@ void uiWindowOnClosing(uiWindow *w, int (*f)(uiWindow *, void *), void *data)
 {
 	w->onClosing = f;
 	w->onClosingData = data;
+}
+
+void uiWindowOnKey(uiWindow *w, int (*f)(uiWindow *, int, int, void *), void *data)
+{
+	w->onKey = f;
+	w->onKeyData = data;
+}
+
+// Called from the message loop with a WM_KEYDOWN / WM_SYSKEYDOWN aimed at any HWND
+// inside a uiWindow. Non-zero: the window's uiWindowOnKey callback consumed it.
+int uiprivWindowKeyFilter(HWND toplevel, MSG *msg)
+{
+	uiWindow *w;
+	int mods;
+
+	if (toplevel == NULL)
+		return 0;
+	if (windowClassOf(toplevel, windowClass, NULL) != 0)
+		return 0;		// not one of ours
+	w = uiWindow(GetWindowLongPtrW(toplevel, GWLP_USERDATA));
+	if (w == NULL || w->onKey == NULL)
+		return 0;
+	mods = 0;
+	if (GetKeyState(VK_CONTROL) & 0x8000)
+		mods |= uiWindowKeyCtrl;
+	if (GetKeyState(VK_SHIFT) & 0x8000)
+		mods |= uiWindowKeyShift;
+	if (GetKeyState(VK_MENU) & 0x8000)
+		mods |= uiWindowKeyAlt;
+	return (*(w->onKey))(w, (int) msg->wParam, mods, w->onKeyData);
 }
 
 void uiWindowOnFocusChanged(uiWindow *w, void (*f)(uiWindow *, void *), void *data)

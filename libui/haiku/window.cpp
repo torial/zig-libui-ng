@@ -12,6 +12,8 @@ struct uiWindow {
 	int margined;
 	int (*onClosing)(uiWindow *, void *);
 	void *onClosingData;
+	int (*onKey)(uiWindow *, int, int, void *);
+	void *onKeyData;
 };
 
 #define toWindow(c) ((uiWindow *) (c))
@@ -119,6 +121,13 @@ void uiWindowContentSize(uiWindow *w, int *width, int *height)
 	BRect b = w->window->Bounds();
 	*width = (int) b.Width();
 	*height = (int) b.Height();
+}
+
+// uiWindowOnKey (torial fork): stored, not fired on this backend yet -- see ui.h.
+void uiWindowOnKey(uiWindow *w, int (*f)(uiWindow *, int, int, void *), void *data)
+{
+	w->onKey = f;
+	w->onKeyData = data;
 }
 
 void uiWindowOnClosing(uiWindow *w, int (*f)(uiWindow *, void *), void *data)

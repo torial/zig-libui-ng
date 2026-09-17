@@ -24,6 +24,8 @@ struct uiWindow {
 
 	int (*onClosing)(uiWindow *, void *);
 	void *onClosingData;
+	int (*onKey)(uiWindow *, int, int, void *);
+	void *onKeyData;
 	void (*onContentSizeChanged)(uiWindow *, void *);
 	void *onContentSizeChangedData;
 	void (*onFocusChanged)(uiWindow *, void *);
@@ -266,6 +268,13 @@ void uiWindowOnClosing(uiWindow *w, int (*f)(uiWindow *, void *), void *data)
 int uiWindowFocused(uiWindow *w)
 {
 	return w->focused;
+}
+
+// uiWindowOnKey (torial fork): stored, not fired on this backend yet -- see ui.h.
+void uiWindowOnKey(uiWindow *w, int (*f)(uiWindow *, int, int, void *), void *data)
+{
+	w->onKey = f;
+	w->onKeyData = data;
 }
 
 void uiWindowOnFocusChanged(uiWindow *w, void (*f)(uiWindow *, void *), void *data)

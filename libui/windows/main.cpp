@@ -51,6 +51,11 @@ static void processMessage(MSG *msg)
 		correctParent = parentToplevel(msg->hwnd);
 	else		// just to be safe
 		correctParent = GetActiveWindow();
+	// uiWindowOnKey (torial fork): the window sees a key-down before the dialog
+	// manager, the focused control, or TranslateMessage() makes a WM_CHAR of it.
+	if (msg->message == WM_KEYDOWN || msg->message == WM_SYSKEYDOWN)
+		if (uiprivWindowKeyFilter(correctParent, msg))
+			return;
 	if (correctParent != NULL)
 		// this calls our mesage filter above for us
 		if (IsDialogMessage(correctParent, msg) != 0)

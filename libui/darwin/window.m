@@ -10,6 +10,8 @@ struct uiWindow {
 	int margined;
 	int (*onClosing)(uiWindow *, void *);
 	void *onClosingData;
+	int (*onKey)(uiWindow *, int, int, void *);
+	void *onKeyData;
 	uiprivSingleChildConstraints constraints;
 	void (*onContentSizeChanged)(uiWindow *, void *);
 	void *onContentSizeChangedData;
@@ -329,6 +331,13 @@ void uiWindowOnContentSizeChanged(uiWindow *w, void (*f)(uiWindow *, void *), vo
 {
 	w->onContentSizeChanged = f;
 	w->onContentSizeChangedData = data;
+}
+
+// uiWindowOnKey (torial fork): stored, not fired on this backend yet -- see ui.h.
+void uiWindowOnKey(uiWindow *w, int (*f)(uiWindow *, int, int, void *), void *data)
+{
+	w->onKey = f;
+	w->onKeyData = data;
 }
 
 void uiWindowOnFocusChanged(uiWindow *w, void (*f)(uiWindow *, void *), void *data)
