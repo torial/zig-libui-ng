@@ -33,6 +33,8 @@ pub fn build(b: *std.Build) void {
             .flags = &.{"-std=c++17"},
         });
         sci_c.linkSystemLibrary("imm32", .{});
+    } else {
+        sci_c.addCSourceFile(.{ .file = b.path("libui_scintilla/stub.c") });
     }
     sci_c.linkLibrary(libui.artifact("ui"));
 
