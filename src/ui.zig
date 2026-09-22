@@ -49,6 +49,9 @@ pub const ErrorContext = union(enum) {
     TableOnRowClicked: ?*Table,
     TableOnRowDoubleClicked: ?*Table,
     TableOnSelectionChanged: ?*Table,
+    TreeOnSelectionChanged: ?*Tree,
+    TreeOnNodeActivated: ?*Tree,
+    TreeOnNodeExpanded: ?*Tree,
     TabOnSelected: ?*Tab,
 };
 
@@ -242,6 +245,8 @@ pub const OpenTypeFeatures = draw.OpenTypeFeatures;
 pub const table = @import("table.zig");
 pub const Image = table.Image;
 pub const Table = table.Table;
+pub const tree = @import("tree.zig");
+pub const Tree = tree.Tree;
 
 const std = @import("std");
 const root = @import("root");

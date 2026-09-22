@@ -4362,6 +4362,42 @@ _UI_EXTERN void uiTableSetSelection(uiTable *t, uiTableSelection *sel);
  */
 _UI_EXTERN void uiFreeTableSelection(uiTableSelection* s);
 
+/**
+ * @defgroup tree uiTree -- a native single-column tree (2026-09-22, torial fork)
+ *
+ * The subset every backend has natively: one text column, expand/collapse, single
+ * selection, activation. SysTreeView32 on Windows (which has no columns -- the reason
+ * there are none here), GtkTreeView over a hierarchical model on GTK, NSOutlineView on
+ * macOS, BOutlineListView on Haiku. Pull-based like uiTable: the app owns the data and
+ * libui asks. A node is an opaque pointer the app hands out; NULL is the root.
+ * @{
+ */
+typedef struct uiTreeModel uiTreeModel;
+typedef struct uiTreeModelHandler uiTreeModelHandler;
+struct uiTreeModelHandler {
+	int (*NumChildren)(uiTreeModelHandler *, uiTreeModel *, void *parent);
+	void *(*Child)(uiTreeModelHandler *, uiTreeModel *, void *parent, int index);
+	const char *(*Text)(uiTreeModelHandler *, uiTreeModel *, void *node);   /* app-owned; valid until the next handler call */
+	int (*HasChildren)(uiTreeModelHandler *, uiTreeModel *, void *node);
+};
+_UI_EXTERN uiTreeModel *uiNewTreeModel(uiTreeModelHandler *mh);
+_UI_EXTERN void uiFreeTreeModel(uiTreeModel *m);
+_UI_EXTERN void uiTreeModelNodeInserted(uiTreeModel *m, void *parent, int index);
+_UI_EXTERN void uiTreeModelNodeDeleted(uiTreeModel *m, void *parent, int index);
+_UI_EXTERN void uiTreeModelNodeChanged(uiTreeModel *m, void *node);
+
+typedef struct uiTree uiTree;
+#define uiTree(this) ((uiTree *) (this))
+_UI_EXTERN uiTree *uiNewTree(uiTreeModel *m);
+_UI_EXTERN void uiTreeSetExpanded(uiTree *t, void *node, int expanded);
+_UI_EXTERN int uiTreeExpanded(uiTree *t, void *node);
+_UI_EXTERN void *uiTreeSelection(uiTree *t);
+_UI_EXTERN void uiTreeSetSelection(uiTree *t, void *node);
+_UI_EXTERN void uiTreeOnSelectionChanged(uiTree *t, void (*f)(uiTree *t, void *data), void *data);
+_UI_EXTERN void uiTreeOnNodeActivated(uiTree *t, void (*f)(uiTree *t, void *node, void *data), void *data);
+_UI_EXTERN void uiTreeOnNodeExpanded(uiTree *t, void (*f)(uiTree *t, void *node, int expanded, void *data), void *data);
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif

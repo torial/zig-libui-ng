@@ -41,6 +41,8 @@ libui_sources += [
 	'unix/stddialogs.c',
 	'unix/tab.c',
 	'unix/table.c',
+	'unix/tree.c',
+	'unix/treemodel.c',
 	'unix/tablemodel.c',
 	'unix/text.c',
 	'unix/util.c',

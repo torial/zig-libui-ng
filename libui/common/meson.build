@@ -11,6 +11,7 @@ libui_sources += [
 	'common/opentype.c',
 	'common/shouldquit.c',
 	'common/table.c',
+	'common/treemodel.c',
 	'common/tablemodel.c',
 	'common/tablevalue.c',
 	'common/userbugs.c',

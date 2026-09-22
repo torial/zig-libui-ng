@@ -53,6 +53,7 @@ libui_sources += [
 	'windows/stddialogs.cpp',
 	'windows/tab.cpp',
 	'windows/table.cpp',
+	'windows/tree.cpp',
 	'windows/tabledispinfo.cpp',
 	'windows/tabledraw.cpp',
 	'windows/tableediting.cpp',

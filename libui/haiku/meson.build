@@ -41,6 +41,7 @@ libui_sources += [
 	'haiku/stddialogs.cpp',
 	'haiku/tab.cpp',
 	'haiku/table.cpp',
+	'haiku/tree.cpp',
 	'haiku/tablemodel.cpp',
 	'haiku/text.cpp',
 	'haiku/window.cpp',

@@ -44,6 +44,7 @@ libui_sources += [
 	'darwin/stddialogs.m',
 	'darwin/tab.m',
 	'darwin/table.m',
+	'darwin/tree.m',
 	'darwin/tablecolumn.m',
 	'darwin/text.m',
 	'darwin/undocumented.m',
