@@ -485,7 +485,7 @@ _UI_EXTERN void uiWindowOnClosing(uiWindow *w,
  *          Return non-zero to CONSUME the key (no control sees it, and no character
  *          is generated from it), zero to let it through.
  * @param data User data to be passed to the callback.
- * @note Windows fires it; the unix, darwin and haiku backends store the callback
+ * @note Windows fires it; the unix and darwin backends store the callback
  *       but do not fire it yet.
  * @note Only one callback can be registered at a time.
  * @memberof uiWindow
@@ -4368,7 +4368,7 @@ _UI_EXTERN void uiFreeTableSelection(uiTableSelection* s);
  * The subset every backend has natively: one text column, expand/collapse, single
  * selection, activation. SysTreeView32 on Windows (which has no columns -- the reason
  * there are none here), GtkTreeView over a hierarchical model on GTK, NSOutlineView on
- * macOS, BOutlineListView on Haiku. Pull-based like uiTable: the app owns the data and
+ * macOS. Pull-based like uiTable: the app owns the data and
  * libui asks. A node is an opaque pointer the app hands out; NULL is the root.
  * @{
  */

@@ -54,7 +54,7 @@ pub const Scintilla = opaque {
 
     /// Receive Scintilla notifications (SCN_*). One handler per control; libui
     /// delivers them on the UI thread through its WM_NOTIFY routing (windows only —
-    /// the Haiku/other platform layers have no shim yet, so this is a no-op there
+    /// other platform layers have no shim yet, so this is a no-op there
     /// only in the sense that the extern is never called).
     pub fn OnNotify(self: *Scintilla, comptime T: type, comptime E: type, comptime f: *const fn (*Scintilla, *const Notification, ?*T) E!void, userdata: ?*T) void {
         const callback = struct {
