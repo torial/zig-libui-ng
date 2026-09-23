@@ -53,6 +53,7 @@ pub const ErrorContext = union(enum) {
     TreeOnNodeActivated: ?*Tree,
     TreeOnNodeExpanded: ?*Tree,
     TabOnSelected: ?*Tab,
+    ToolbarOnClicked: ?*Toolbar,
 };
 
 pub const Error = error{ LibUIPassedNullPointer, LibUINullUserdata };
@@ -255,6 +256,8 @@ pub const Image = table.Image;
 pub const Table = table.Table;
 pub const tree = @import("tree.zig");
 pub const Tree = tree.Tree;
+pub const toolbar = @import("toolbar.zig");
+pub const Toolbar = toolbar.Toolbar;
 
 const std = @import("std");
 const root = @import("root");

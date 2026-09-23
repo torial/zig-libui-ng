@@ -23,6 +23,7 @@ pub const Window = opaque {
     pub extern fn uiWindowBorderless(w: *Window) c_int;
     pub extern fn uiWindowSetBorderless(w: *Window, borderless: c_int) void;
     pub extern fn uiWindowSetChild(w: *Window, child: ?*Control) void;
+    pub extern fn uiWindowSetToolbar(w: *Window, t: ?*Toolbar) void;
     pub extern fn uiWindowMargined(w: *Window) c_int;
     pub extern fn uiWindowSetMargined(w: *Window, margined: c_int) void;
     pub extern fn uiWindowResizeable(w: *Window) c_int;
@@ -32,6 +33,8 @@ pub const Window = opaque {
     pub const Title = uiWindowTitle;
     pub const SetTitle = uiWindowSetTitle;
     pub const SetChild = uiWindowSetChild;
+    /// torial fork 2026-09-23: attach a toolbar under the menubar (null detaches). The window owns it.
+    pub const SetToolbar = uiWindowSetToolbar;
 
     const Point = struct {
         x: c_int,
@@ -240,6 +243,7 @@ pub const Window = opaque {
 };
 
 pub const Control = ui.Control;
+pub const Toolbar = ui.Toolbar;
 pub const ErrorContext = ui.ErrorContext;
 pub const error_handler = ui.error_handler;
 

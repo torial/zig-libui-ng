@@ -54,6 +54,7 @@ libui_sources += [
 	'windows/tab.cpp',
 	'windows/table.cpp',
 	'windows/tree.cpp',
+	'windows/toolbar.cpp',
 	'windows/tooltip.cpp',
 	'windows/tabledispinfo.cpp',
 	'windows/tabledraw.cpp',

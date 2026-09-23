@@ -61,6 +61,10 @@ extern PangoAttribute *uiprivFUTURE_pango_attr_foreground_alpha_new(guint16 alph
 extern PangoAttribute *uiprivFUTURE_pango_attr_background_alpha_new(guint16 alpha);
 extern gboolean uiprivFUTURE_gtk_widget_path_iter_set_object_name(GtkWidgetPath *path, gint pos, const char *name);
 
+// toolbar.c
+extern GtkWidget *uiprivToolbarWidget(uiToolbar *t);
+extern void uiprivFreeToolbar(uiToolbar *t);
+
 // keymap.c
 extern int uiprivUnixKeyvalToVK(guint keyval);
 extern int uiprivUnixKeyMods(guint state);

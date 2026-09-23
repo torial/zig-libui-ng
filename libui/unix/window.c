@@ -16,6 +16,7 @@ struct uiWindow {
 	GtkContainer *childHolderContainer;
 
 	GtkWidget *menubar;
+	uiToolbar *toolbar;
 
 	uiControl *child;
 	int margined;
@@ -138,6 +139,8 @@ static void uiWindowDestroy(uiControl *c)
 	// now destroy the menus, if any
 	if (w->menubar != NULL)
 		uiprivFreeMenubar(w->menubar);
+	if (w->toolbar != NULL)
+		uiprivFreeToolbar(w->toolbar);
 	gtk_widget_destroy(w->childHolderWidget);
 	gtk_widget_destroy(w->vboxWidget);
 	// and finally free ourselves
@@ -286,6 +289,20 @@ static gboolean onKeyPress(GtkWidget *win, GdkEventKey *e, gpointer data)
 	if ((*(w->onKey))(w, vk, uiprivUnixKeyMods(e->state), w->onKeyData))
 		return TRUE;
 	return FALSE;
+}
+
+// uiWindowSetToolbar (torial fork, 2026-09-23): under the menubar, above the content.
+void uiWindowSetToolbar(uiWindow *w, uiToolbar *t)
+{
+	GtkWidget *tw;
+
+	if (w->toolbar != NULL)
+		return;
+	w->toolbar = t;
+	tw = uiprivToolbarWidget(t);
+	gtk_box_pack_start(w->vbox, tw, FALSE, FALSE, 0);
+	gtk_box_reorder_child(w->vbox, tw, w->menubar != NULL ? 1 : 0);
+	gtk_widget_show_all(tw);
 }
 
 void uiWindowOnKey(uiWindow *w, int (*f)(uiWindow *, int, int, void *), void *data)

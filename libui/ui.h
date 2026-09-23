@@ -4428,6 +4428,31 @@ _UI_EXTERN char *uiClipboardText(void);
 _UI_EXTERN void uiClipboardSetText(const char *text);
 /** @} */
 
+/**
+ * @defgroup toolbar uiToolbar -- a native toolbar under the menubar (2026-09-23, torial fork)
+ *
+ * Window-owned, like the menubar: build it with uiNewToolbar(), append items, hand it
+ * to the window with uiWindowSetToolbar() (before or after uiControlShow). The window
+ * places it below the menubar and above the content on every platform -- GtkToolbar,
+ * ToolbarWindow32, NSToolbar (which lives in the title bar, as the platform wants).
+ * An item is a label, an optional icon (a uiImage; nearest representation) and an
+ * optional tooltip; a click reports the item's index. Separators are items too, so
+ * indices stay stable. uiToolbarClear() empties it for a rebuild.
+ * @{
+ */
+typedef struct uiToolbar uiToolbar;
+_UI_EXTERN uiToolbar *uiNewToolbar(void);
+/** Attach `t` to `w`; the window owns it from here. Once per window. */
+_UI_EXTERN void uiWindowSetToolbar(uiWindow *w, uiToolbar *t);
+/** Append an item; `icon` and `tooltip` may be NULL. Returns the item's index. */
+_UI_EXTERN int uiToolbarAppendItem(uiToolbar *t, const char *label, uiImage *icon, const char *tooltip);
+_UI_EXTERN int uiToolbarAppendSeparator(uiToolbar *t);
+_UI_EXTERN int uiToolbarNumItems(uiToolbar *t);
+_UI_EXTERN void uiToolbarClear(uiToolbar *t);
+_UI_EXTERN void uiToolbarSetItemEnabled(uiToolbar *t, int index, int enabled);
+_UI_EXTERN void uiToolbarOnClicked(uiToolbar *t, void (*f)(uiToolbar *t, int index, void *data), void *data);
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif

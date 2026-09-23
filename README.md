@@ -17,7 +17,12 @@ brings upstream commits), wired as a path dependency in `build.zig.zon`, so a C 
 and its Zig binding land in one commit. Also here: Scintilla (`scintilla/`), the
 libui-scintilla shim (`libui_scintilla/`, the `sci` module), and additions upstream
 libui-ng does not have -- `uiTabName` / `uiTabSetName`, `uiScintillaOnNotify` /
-`uiScintillaOnKey`, a Haiku backend. Consumer: the Zebra language's `--gui-backend=libui_ng`
+`uiScintillaOnKey` (Scintilla on Windows and GTK), `uiWindowOnKey`, `uiTree` (a native
+tree), `uiControlSetTooltip`, `uiClipboard*`, the area's full mouse and key events, and
+`uiToolbar` (2026-09-23: GtkToolbar / ToolbarWindow32 / NSToolbar). Haiku was dropped on
+2026-09-23. Platform tiers: Windows and GTK are built and witnessed here; macOS is the
+second tier -- written against the Cocoa API without a build, tested when a Mac is to
+hand. Consumer: the Zebra language's `--gui-backend=libui_ng`
 (pinned by commit in its compiler; `tools/bump_libui_pin.sh` there after a push).
 Builds with zig 0.16.
 

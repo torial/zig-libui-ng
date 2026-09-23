@@ -155,6 +155,10 @@ extern NSTextField *uiprivNewLabel(NSString *str);
 // image.m
 extern NSImage *uiprivImageNSImage(uiImage *);
 
+// toolbar.m (torial fork, 2026-09-23)
+extern void uiprivToolbarAttach(uiToolbar *t, NSWindow *w);
+extern void uiprivFreeToolbar(uiToolbar *t);
+
 // winmoveresize.m
 extern void uiprivDoManualMove(NSWindow *w, NSEvent *initialEvent);
 extern void uiprivDoManualResize(NSWindow *w, NSEvent *initialEvent, uiWindowResizeEdge edge);

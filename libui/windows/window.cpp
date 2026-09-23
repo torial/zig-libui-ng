@@ -7,6 +7,7 @@ struct uiWindow {
 	uiWindowsControl c;
 	HWND hwnd;
 	HMENU menubar;
+	uiToolbar *toolbar;		// torial fork 2026-09-23; NULL when none
 	uiControl *child;
 	BOOL shownOnce;
 	int visible;
@@ -56,13 +57,21 @@ static void windowRelayout(uiWindow *w)
 	int mx, my;
 	HWND child;
 
-	if (w->child == NULL)
-		return;
 	x = 0;
 	y = 0;
 	uiWindowsEnsureGetClientRect(w->hwnd, &r);
 	width = r.right - r.left;
 	height = r.bottom - r.top;
+	// the toolbar takes the top strip, full width, outside the margins
+	if (w->toolbar != NULL) {
+		int th;
+
+		th = uiprivToolbarLayout(w->toolbar, width);
+		y += th;
+		height -= th;
+	}
+	if (w->child == NULL)
+		return;
 	windowMargins(w, &mx, &my);
 	x += mx;
 	y += my;
@@ -187,6 +196,9 @@ static void uiWindowDestroy(uiControl *c)
 		uiControlSetParent(w->child, NULL);
 		uiControlDestroy(w->child);
 	}
+	// now free the toolbar, if any
+	if (w->toolbar != NULL)
+		uiprivFreeToolbar(w->toolbar);
 	// now free the menubar, if any
 	if (w->menubar != NULL)
 		freeMenubar(w->menubar);
@@ -269,6 +281,14 @@ static void uiWindowMinimumSize(uiWindowsControl *c, int *width, int *height)
 	windowMargins(w, &mx, &my);
 	*width += 2 * mx;
 	*height += 2 * my;
+	if (w->toolbar != NULL) {
+		int tw;
+
+		tw = uiprivToolbarMinimumWidth(w->toolbar);
+		if (tw > *width)
+			*width = tw;
+		*height += uiprivToolbarLayout(w->toolbar, *width);
+	}
 }
 
 static void uiWindowMinimumSizeChanged(uiWindowsControl *c)
@@ -501,6 +521,17 @@ void uiWindowSetChild(uiWindow *w, uiControl *child)
 	}
 }
 
+// uiWindowSetToolbar (torial fork, 2026-09-23): a ToolbarWindow32 across the top of the
+// client area; windowRelayout() puts the child below it.
+void uiWindowSetToolbar(uiWindow *w, uiToolbar *t)
+{
+	if (w->toolbar != NULL)
+		return;
+	w->toolbar = t;
+	uiprivToolbarAttach(t, w, w->hwnd);
+	windowRelayout(w);
+}
+
 int uiWindowMargined(uiWindow *w)
 {
 	return w->margined;
@@ -564,6 +595,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	if (hasMenubar)
 		hasMenubarBOOL = TRUE;
 	w->hasMenubar = hasMenubarBOOL;
+	w->toolbar = NULL;
 
 #define style WS_OVERLAPPEDWINDOW
 #define exstyle 0

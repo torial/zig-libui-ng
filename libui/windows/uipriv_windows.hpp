@@ -179,5 +179,10 @@ extern void uiprivUninitImage(void);
 extern IWICBitmap *uiprivImageAppropriateForDC(uiImage *i, HDC dc);
 extern HRESULT uiprivWICToGDI(IWICBitmap *b, HDC dc, int width, int height, HBITMAP *hb);
 
-#endif
+// toolbar.cpp (torial fork, 2026-09-23)
+extern void uiprivToolbarAttach(uiToolbar *t, uiWindow *w, HWND parent);
+extern int uiprivToolbarLayout(uiToolbar *t, int width);
+extern int uiprivToolbarMinimumWidth(uiToolbar *t);
+extern void uiprivFreeToolbar(uiToolbar *t);
 
+#endif

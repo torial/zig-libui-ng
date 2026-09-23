@@ -6,6 +6,7 @@
 struct uiWindow {
 	uiDarwinControl c;
 	NSWindow *window;
+	uiToolbar *toolbar;		// torial fork 2026-09-23; NULL when none
 	uiControl *child;
 	int margined;
 	int (*onClosing)(uiWindow *, void *);
@@ -142,6 +143,8 @@ static void uiWindowDestroy(uiControl *c)
 		uiDarwinControlSetSuperview(uiDarwinControl(w->child), nil);
 		uiControlDestroy(w->child);
 	}
+	if (w->toolbar != NULL)
+		uiprivFreeToolbar(w->toolbar);
 	[w->window release];
 	uiFreeControl(uiControl(w));
 }
@@ -399,6 +402,16 @@ void uiWindowSetChild(uiWindow *w, uiControl *child)
 	windowRelayout(w);
 }
 
+// uiWindowSetToolbar (torial fork, 2026-09-23): an NSToolbar in the title bar, where the
+// platform keeps them; the content view is unaffected.
+void uiWindowSetToolbar(uiWindow *w, uiToolbar *t)
+{
+	if (w->toolbar != NULL)
+		return;
+	w->toolbar = t;
+	uiprivToolbarAttach(t, w->window);
+}
+
 int uiWindowMargined(uiWindow *w)
 {
 	return w->margined;
@@ -451,6 +464,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	w->window = [[uiprivNSWindow alloc] initWithWidth:(CGFloat)width
 		height:(CGFloat)height
 		uiWindow:w];
+	w->toolbar = NULL;
 	uiWindowSetTitle(w, title);
 	uiWindowSetResizeable(w, 1);
 
