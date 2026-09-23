@@ -12,6 +12,7 @@ struct uiTree {
 	GtkTreeView *tv;
 	uiTreeModel *model;
 	gboolean inSet;
+	gboolean userAct;	// inside a mouse/key press on the view: a selection is the user's
 	void (*onSelectionChanged)(uiTree *, void *);
 	void *onSelectionChangedData;
 	void (*onNodeActivated)(uiTree *, void *, void *);
@@ -38,6 +39,32 @@ static void defaultOnNodeExpanded(uiTree *t, void *node, int expanded, void *dat
 void uiTreeOnSelectionChanged(uiTree *t, void (*f)(uiTree *, void *), void *data) { t->onSelectionChanged = f; t->onSelectionChangedData = data; }
 void uiTreeOnNodeActivated(uiTree *t, void (*f)(uiTree *, void *, void *), void *data) { t->onNodeActivated = f; t->onNodeActivatedData = data; }
 void uiTreeOnNodeExpanded(uiTree *t, void (*f)(uiTree *, void *, int, void *), void *data) { t->onNodeExpanded = f; t->onNodeExpandedData = data; }
+
+// GTK selects the first row by itself when the view first takes keyboard focus
+// (gtk_tree_view_focus_to_cursor), which reached the app as an onSelectionChanged
+// nobody clicked for. A selection is allowed only while a press is being handled
+// or while uiTreeSetSelection runs; the focus-time one is refused, so the view
+// shows nothing selected and says nothing -- the same as the Windows control.
+static gboolean selectFunc(GtkTreeSelection *s, GtkTreeModel *m, GtkTreePath *path, gboolean cur, gpointer data)
+{
+	uiTree *t = uiTree(data);
+
+	if (cur)		// unselecting is always fine
+		return TRUE;
+	return t->userAct || t->inSet;
+}
+
+static gboolean onPress(GtkWidget *w, GdkEvent *e, gpointer data)
+{
+	uiTree(data)->userAct = TRUE;
+	return FALSE;
+}
+
+static gboolean onRelease(GtkWidget *w, GdkEvent *e, gpointer data)
+{
+	uiTree(data)->userAct = FALSE;
+	return FALSE;
+}
 
 static void onSelectionChanged(GtkTreeSelection *s, gpointer data)
 {
@@ -147,6 +174,7 @@ uiTree *uiNewTree(uiTreeModel *m)
 
 	t->model = m;
 	t->inSet = FALSE;
+	t->userAct = FALSE;
 
 	t->widget = gtk_scrolled_window_new(NULL, NULL);
 	t->scontainer = GTK_CONTAINER(t->widget);
@@ -166,7 +194,12 @@ uiTree *uiNewTree(uiTreeModel *m)
 
 	selection = gtk_tree_view_get_selection(t->tv);
 	gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+	gtk_tree_selection_set_select_function(selection, selectFunc, t, NULL);
 	g_signal_connect(selection, "changed", G_CALLBACK(onSelectionChanged), t);
+	g_signal_connect(t->tv, "button-press-event", G_CALLBACK(onPress), t);
+	g_signal_connect(t->tv, "key-press-event", G_CALLBACK(onPress), t);
+	g_signal_connect(t->tv, "button-release-event", G_CALLBACK(onRelease), t);
+	g_signal_connect(t->tv, "key-release-event", G_CALLBACK(onRelease), t);
 	g_signal_connect(t->tv, "row-activated", G_CALLBACK(onRowActivated), t);
 	g_signal_connect(t->tv, "row-expanded", G_CALLBACK(onRowExpanded), t);
 	g_signal_connect(t->tv, "row-collapsed", G_CALLBACK(onRowCollapsed), t);
