@@ -485,8 +485,8 @@ _UI_EXTERN void uiWindowOnClosing(uiWindow *w,
  *          Return non-zero to CONSUME the key (no control sees it, and no character
  *          is generated from it), zero to let it through.
  * @param data User data to be passed to the callback.
- * @note Windows fires it; the unix and darwin backends store the callback
- *       but do not fire it yet.
+ * @note Windows and GTK fire it; the darwin backend stores the callback
+ *       but does not fire it yet.
  * @note Only one callback can be registered at a time.
  * @memberof uiWindow
  */

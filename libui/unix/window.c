@@ -270,7 +270,24 @@ int uiWindowFocused(uiWindow *w)
 	return w->focused;
 }
 
-// uiWindowOnKey (torial fork): stored, not fired on this backend yet -- see ui.h.
+// uiWindowOnKey (torial fork). GTK delivers key-press-event to the toplevel first
+// and only then propagates to the focused widget, so a handler on the window sees
+// every chord before any control; returning TRUE stops propagation (2026-09-23).
+static gboolean onKeyPress(GtkWidget *win, GdkEventKey *e, gpointer data)
+{
+	uiWindow *w = uiWindow(data);
+	int vk;
+
+	if (w->onKey == NULL)
+		return FALSE;
+	vk = uiprivUnixKeyvalToVK(e->keyval);
+	if (vk == 0)
+		return FALSE;
+	if ((*(w->onKey))(w, vk, uiprivUnixKeyMods(e->state), w->onKeyData))
+		return TRUE;
+	return FALSE;
+}
+
 void uiWindowOnKey(uiWindow *w, int (*f)(uiWindow *, int, int, void *), void *data)
 {
 	w->onKey = f;
@@ -391,6 +408,7 @@ uiWindow *uiNewWindow(const char *title, int width, int height, int hasMenubar)
 	g_signal_connect(w->widget, "focus-in-event", G_CALLBACK(onGetFocus), w);
 	g_signal_connect(w->widget, "focus-out-event", G_CALLBACK(onLoseFocus), w);
 	g_signal_connect(w->widget, "configure-event", G_CALLBACK(onConfigure), w);
+	g_signal_connect(w->widget, "key-press-event", G_CALLBACK(onKeyPress), w);
 
 	uiWindowOnClosing(w, defaultOnClosing, NULL);
 	uiWindowOnContentSizeChanged(w, defaultOnPositionContentSizeChanged, NULL);

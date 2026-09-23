@@ -28,6 +28,7 @@ libui_sources += [
 	'unix/grid.c',
 	'unix/group.c',
 	'unix/image.c',
+	'unix/keymap.c',
 	'unix/label.c',
 	'unix/main.c',
 	'unix/menu.c',

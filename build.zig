@@ -29,10 +29,30 @@ pub fn build(b: *std.Build) void {
     if (target.result.os.tag == .windows) {
         sci_c.addIncludePath(b.path("scintilla/win32"));
         sci_c.addCSourceFiles(.{
+            .files = &scintilla_common_sources,
+            .flags = &.{"-std=c++17"},
+        });
+        sci_c.addCSourceFiles(.{
             .files = &scintilla_win_sources,
             .flags = &.{"-std=c++17"},
         });
         sci_c.linkSystemLibrary("imm32", .{});
+    } else if (target.result.os.tag == .linux) {
+        // ScintillaGTK (2026-09-23): the gtk/ platform layer from the same 5.5.3
+        // tarball as src/, the GObject marshaller, and libui_scintilla/unix.cxx.
+        sci_c.addIncludePath(b.path("scintilla/gtk"));
+        sci_c.addIncludePath(libui.path("unix"));
+        sci_c.addCSourceFiles(.{
+            .files = &scintilla_common_sources,
+            .flags = &.{ "-std=c++17", "-DGTK", "-DNDEBUG" },
+        });
+        sci_c.addCSourceFiles(.{
+            .files = &scintilla_gtk_sources,
+            .flags = &.{ "-std=c++17", "-DGTK", "-DNDEBUG" },
+        });
+        sci_c.addCSourceFile(.{ .file = b.path("scintilla/gtk/scintilla-marshal.c"), .flags = &.{"-DGTK"} });
+        sci_c.linkSystemLibrary("gtk+-3.0", .{});
+        sci_c.linkSystemLibrary("gmodule-2.0", .{});
     } else {
         sci_c.addCSourceFile(.{ .file = b.path("libui_scintilla/stub.c") });
     }
@@ -53,7 +73,7 @@ pub fn build(b: *std.Build) void {
     sci_module.linkLibrary(sci_lib);
 }
 
-const scintilla_win_sources = [_][]const u8{
+const scintilla_common_sources = [_][]const u8{
     "scintilla/src/AutoComplete.cxx",
     "scintilla/src/CallTip.cxx",
     "scintilla/src/CaseConvert.cxx",
@@ -87,8 +107,16 @@ const scintilla_win_sources = [_][]const u8{
     "scintilla/src/UniqueString.cxx",
     "scintilla/src/ViewStyle.cxx",
     "scintilla/src/XPM.cxx",
+};
+const scintilla_win_sources = [_][]const u8{
     "scintilla/win32/HanjaDic.cxx",
     "scintilla/win32/PlatWin.cxx",
     "scintilla/win32/ScintillaWin.cxx",
     "libui_scintilla/win.cxx",
+};
+const scintilla_gtk_sources = [_][]const u8{
+    "scintilla/gtk/PlatGTK.cxx",
+    "scintilla/gtk/ScintillaGTK.cxx",
+    "scintilla/gtk/ScintillaGTKAccessible.cxx",
+    "libui_scintilla/unix.cxx",
 };
