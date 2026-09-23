@@ -184,8 +184,13 @@ uiTree *uiNewTree(uiTreeModel *m)
 	t->treeWidget = gtk_tree_view_new_with_model(GTK_TREE_MODEL(m));
 	t->tv = GTK_TREE_VIEW(t->treeWidget);
 	gtk_tree_view_set_headers_visible(t->tv, FALSE);
+	col = gtk_tree_view_column_new();
+	r = gtk_cell_renderer_pixbuf_new();		// the icon, 2026-09-23; an empty pixbuf renders nothing
+	gtk_tree_view_column_pack_start(col, r, FALSE);
+	gtk_tree_view_column_add_attribute(col, r, "pixbuf", 1);
 	r = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes("", r, "text", 0, NULL);
+	gtk_tree_view_column_pack_start(col, r, TRUE);
+	gtk_tree_view_column_add_attribute(col, r, "text", 0);
 	gtk_tree_view_append_column(t->tv, col);
 
 	uiTreeOnSelectionChanged(t, defaultOnSelectionChanged, NULL);

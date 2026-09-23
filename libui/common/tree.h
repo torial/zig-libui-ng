@@ -11,6 +11,7 @@ extern int uiprivTreeModelNumChildren(uiTreeModel *m, void *parent);
 extern void *uiprivTreeModelChild(uiTreeModel *m, void *parent, int index);
 extern const char *uiprivTreeModelText(uiTreeModel *m, void *node);
 extern int uiprivTreeModelHasChildren(uiTreeModel *m, void *node);
+extern uiImage *uiprivTreeModelIcon(uiTreeModel *m, void *node);   // NULL when the handler has no Icon or returns none
 
 #ifdef __cplusplus
 }

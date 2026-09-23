@@ -14,6 +14,7 @@ pub const Tree = opaque {
             Child: *const fn (*Handler, *Model, ?*anyopaque, c_int) callconv(.c) ?*anyopaque,
             Text: *const fn (*Handler, *Model, ?*anyopaque) callconv(.c) [*:0]const u8,   // app-owned; valid until the next handler call
             HasChildren: *const fn (*Handler, *Model, ?*anyopaque) callconv(.c) c_int,
+            Icon: ?*const fn (*Handler, *Model, ?*anyopaque) callconv(.c) ?*ui.Image = null,   // 2026-09-23: null fn or null result = no icon; the image must outlive the node
         };
         pub extern fn uiNewTreeModel(mh: *Handler) ?*Model;
         pub extern fn uiFreeTreeModel(m: *Model) void;

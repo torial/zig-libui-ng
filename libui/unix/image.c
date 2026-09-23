@@ -141,13 +141,19 @@ writeMatch:
 
 cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w)
 {
+	return uiprivImageAppropriateSurfaceForScale(i, w == NULL ? 1 : gtk_widget_get_scale_factor(w));
+}
+
+// 2026-09-23: the tree model has no widget to ask, so it passes a scale
+cairo_surface_t *uiprivImageAppropriateSurfaceForScale(uiImage *i, int scale)
+{
 	struct matcher m;
 
 	m.best = NULL;
 	m.distX = G_MAXINT;
 	m.distY = G_MAXINT;
-	m.targetX = i->width * gtk_widget_get_scale_factor(w);
-	m.targetY = i->height * gtk_widget_get_scale_factor(w);
+	m.targetX = i->width * scale;
+	m.targetY = i->height * scale;
 	m.foundLarger = FALSE;
 	g_ptr_array_foreach(i->images, match, &m);
 	return m.best;

@@ -42,6 +42,7 @@ libui_sources += [
 	'unix/tab.c',
 	'unix/table.c',
 	'unix/tree.c',
+	'unix/tooltip.c',
 	'unix/treemodel.c',
 	'unix/tablemodel.c',
 	'unix/text.c',

@@ -45,6 +45,7 @@ libui_sources += [
 	'darwin/tab.m',
 	'darwin/table.m',
 	'darwin/tree.m',
+	'darwin/tooltip.m',
 	'darwin/tablecolumn.m',
 	'darwin/text.m',
 	'darwin/undocumented.m',

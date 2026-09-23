@@ -49,6 +49,7 @@ extern void uiprivFreeContext(uiDrawContext *);
 
 // image.c
 extern cairo_surface_t *uiprivImageAppropriateSurface(uiImage *i, GtkWidget *w);
+extern cairo_surface_t *uiprivImageAppropriateSurfaceForScale(uiImage *i, int scale);
 
 // cellrendererbutton.c
 extern GtkCellRenderer *uiprivNewCellRendererButton(void);

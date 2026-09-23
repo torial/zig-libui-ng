@@ -109,6 +109,51 @@ static void *nodeOf(id item)
 {
 	return [NSString stringWithUTF8String:uiprivTreeModelText(self->m, nodeOf(item))];
 }
+// View-based cells (2026-09-23, still blind): an NSTableCellView with an image view and a
+// text field, so a node can carry the handler's icon. Implementing this delegate method is
+// what switches NSOutlineView from cell-based to view-based; objectValueForTableColumn
+// above still supplies the object value.
+- (NSView *)outlineView:(NSOutlineView *)ov viewForTableColumn:(NSTableColumn *)col item:(id)item
+{
+	NSTableCellView *cv;
+	NSTextField *tf;
+	NSImageView *iv;
+	uiImage *img;
+	void *node = nodeOf(item);
+
+	cv = [ov makeViewWithIdentifier:@"uiTreeCell" owner:self];
+	if (cv == nil) {
+		cv = [[[NSTableCellView alloc] initWithFrame:NSZeroRect] autorelease];
+		[cv setIdentifier:@"uiTreeCell"];
+		iv = [[NSImageView alloc] initWithFrame:NSMakeRect(0, 0, 16, 16)];
+		[iv setImageScaling:NSImageScaleProportionallyDown];
+		[cv addSubview:iv];
+		[cv setImageView:iv];
+		[iv release];
+		tf = [[NSTextField alloc] initWithFrame:NSMakeRect(20, 0, 200, 17)];
+		[tf setBordered:NO];
+		[tf setDrawsBackground:NO];
+		[tf setEditable:NO];
+		[[tf cell] setLineBreakMode:NSLineBreakByTruncatingTail];
+		[cv addSubview:tf];
+		[cv setTextField:tf];
+		[tf release];
+		[iv setAutoresizingMask:NSViewMinYMargin | NSViewMaxYMargin];
+		[tf setAutoresizingMask:NSViewWidthSizable | NSViewMinYMargin | NSViewMaxYMargin];
+	}
+	[[cv textField] setStringValue:[NSString stringWithUTF8String:uiprivTreeModelText(self->m, node)]];
+	img = uiprivTreeModelIcon(self->m, node);
+	if (img != NULL) {
+		[[cv imageView] setImage:uiprivImageNSImage(img)];
+		[[cv imageView] setHidden:NO];
+		[[cv textField] setFrame:NSMakeRect(20, 0, [cv bounds].size.width - 20, [cv bounds].size.height)];
+	} else {
+		[[cv imageView] setImage:nil];
+		[[cv imageView] setHidden:YES];
+		[[cv textField] setFrame:NSMakeRect(0, 0, [cv bounds].size.width, [cv bounds].size.height)];
+	}
+	return cv;
+}
 - (void)outlineViewSelectionDidChange:(NSNotification *)note
 {
 	uiprivOutlineView *ov = (uiprivOutlineView *) [note object];

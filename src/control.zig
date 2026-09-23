@@ -20,6 +20,9 @@ pub const Control = extern struct {
 
     pub extern fn uiControlDestroy(c: *Control) void;
     pub extern fn uiControlHandle(c: *Control) usize;
+    /// torial fork, 2026-09-23: the tooltip shown when the pointer rests on the control; "" removes it.
+    pub extern fn uiControlSetTooltip(c: *Control, text: [*:0]const u8) void;
+    pub const SetTooltip = uiControlSetTooltip;
     pub extern fn uiControlParent(c: *Control) ?*Control;
     pub extern fn uiControlSetParent(c: *Control, parent: ?*Control) void;
     pub extern fn uiControlToplevel(c: *Control) c_int;

@@ -4379,6 +4379,7 @@ struct uiTreeModelHandler {
 	void *(*Child)(uiTreeModelHandler *, uiTreeModel *, void *parent, int index);
 	const char *(*Text)(uiTreeModelHandler *, uiTreeModel *, void *node);   /* app-owned; valid until the next handler call */
 	int (*HasChildren)(uiTreeModelHandler *, uiTreeModel *, void *node);
+	uiImage *(*Icon)(uiTreeModelHandler *, uiTreeModel *, void *node);   /* may be NULL, or return NULL for no icon; the image must outlive the node (2026-09-23) */
 };
 _UI_EXTERN uiTreeModel *uiNewTreeModel(uiTreeModelHandler *mh);
 _UI_EXTERN void uiFreeTreeModel(uiTreeModel *m);
@@ -4396,6 +4397,35 @@ _UI_EXTERN void uiTreeSetSelection(uiTree *t, void *node);
 _UI_EXTERN void uiTreeOnSelectionChanged(uiTree *t, void (*f)(uiTree *t, void *data), void *data);
 _UI_EXTERN void uiTreeOnNodeActivated(uiTree *t, void (*f)(uiTree *t, void *node, void *data), void *data);
 _UI_EXTERN void uiTreeOnNodeExpanded(uiTree *t, void (*f)(uiTree *t, void *node, int expanded, void *data), void *data);
+/** @} */
+
+/**
+ * @defgroup tooltip Tooltips (2026-09-23, torial fork)
+ * @{
+ */
+/**
+ * Sets the tooltip shown when the pointer rests on the control; `NULL` or `""` removes it.
+ * Windows: a per-control TOOLTIPS_CLASS window; GTK: gtk_widget_set_tooltip_text; macOS: NSView toolTip.
+ * @param c uiControl instance.
+ * @param text Tooltip text, `NULL` for none. Data is copied internally.
+ * @memberof uiControl
+ */
+_UI_EXTERN void uiControlSetTooltip(uiControl *c, const char *text);
+/** @} */
+
+/**
+ * @defgroup clipboard Clipboard (2026-09-23, torial fork) -- plain text only.
+ * @{
+ */
+/**
+ * @returns The clipboard's text, or `NULL` if it holds none. Free with `uiFreeText()`.
+ */
+_UI_EXTERN char *uiClipboardText(void);
+/**
+ * Replaces the clipboard's contents with `text`.
+ * @param text Text to place on the clipboard. Data is copied internally.
+ */
+_UI_EXTERN void uiClipboardSetText(const char *text);
 /** @} */
 
 #ifdef __cplusplus

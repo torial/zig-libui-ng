@@ -31,13 +31,16 @@ static GtkTreeModelFlags uiTreeModel_get_flags(GtkTreeModel *mm)
 	return GTK_TREE_MODEL_ITERS_PERSIST;
 }
 
+// column 0: the text; column 1: the icon as a GdkPixbuf (NULL for none), 2026-09-23
 static gint uiTreeModel_get_n_columns(GtkTreeModel *mm)
 {
-	return 1;
+	return 2;
 }
 
 static GType uiTreeModel_get_column_type(GtkTreeModel *mm, gint index)
 {
+	if (index == 1)
+		return GDK_TYPE_PIXBUF;
 	return G_TYPE_STRING;
 }
 
@@ -134,6 +137,22 @@ static void uiTreeModel_get_value(GtkTreeModel *mm, GtkTreeIter *iter, gint colu
 	uiTreeModel *m = uiTreeModel(mm);
 
 	g_return_if_fail(iter->stamp == m->stamp);
+	if (column == 1) {
+		uiImage *img;
+		cairo_surface_t *cs;
+		GdkPixbuf *pb = NULL;
+
+		g_value_init(value, GDK_TYPE_PIXBUF);
+		img = uiprivTreeModelIcon(m, iter->user_data);
+		if (img != NULL) {
+			cs = uiprivImageAppropriateSurface(img, NULL);
+			if (cs != NULL)
+				pb = gdk_pixbuf_get_from_surface(cs, 0, 0,
+					cairo_image_surface_get_width(cs), cairo_image_surface_get_height(cs));
+		}
+		g_value_take_object(value, pb);
+		return;
+	}
 	g_value_init(value, G_TYPE_STRING);
 	g_value_set_string(value, uiprivTreeModelText(m, iter->user_data));
 }

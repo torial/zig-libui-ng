@@ -30,3 +30,12 @@ int uiprivTreeModelHasChildren(uiTreeModel *m, void *node)
 
 	return (*(mh->HasChildren))(mh, m, node);
 }
+
+uiImage *uiprivTreeModelIcon(uiTreeModel *m, void *node)
+{
+	uiTreeModelHandler *mh = uiprivTreeModelHandler(m);
+
+	if (mh->Icon == NULL)
+		return NULL;
+	return (*(mh->Icon))(mh, m, node);
+}

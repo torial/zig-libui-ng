@@ -180,6 +180,14 @@ pub extern fn uiQueueMain(f: ?*const fn (?*anyopaque) callconv(.c) void, data: ?
 pub extern fn uiTimer(milliseconds: c_int, f: ?*const fn (?*anyopaque) callconv(.c) TimerAction, data: ?*anyopaque) void;
 pub extern fn uiOnShouldQuit(f: ?*const fn (?*anyopaque) callconv(.c) QuitAction, data: ?*anyopaque) void;
 pub extern fn uiFreeText(text: [*:0]const u8) void;
+/// torial fork, 2026-09-23: plain-text clipboard. Text() is null when the clipboard holds no text;
+/// free the result with FreeText.
+pub extern fn uiClipboardText() ?[*:0]u8;
+pub extern fn uiClipboardSetText(text: [*:0]const u8) void;
+pub const Clipboard = struct {
+    pub const Text = uiClipboardText;
+    pub const SetText = uiClipboardSetText;
+};
 
 pub const Control = @import("control.zig").Control;
 pub const Window = @import("window.zig").Window;

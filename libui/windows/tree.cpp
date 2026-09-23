@@ -68,6 +68,8 @@ struct uiTree {
 	std::map<HTREEITEM, void *> *nodes;      // item -> app node
 	std::map<void *, bool> *populated;       // app node -> children inserted?
 	BOOL inSet;                              // a programmatic change; do not fire callbacks
+	HIMAGELIST himl;                         // icons (2026-09-23): built lazily from the handler's uiImages
+	std::map<uiImage *, int> *icons;         // uiImage -> image list index
 	void (*onSelectionChanged)(uiTree *, void *);
 	void *onSelectionChangedData;
 	void (*onNodeActivated)(uiTree *, void *, void *);
@@ -77,6 +79,45 @@ struct uiTree {
 };
 
 #define treePlaceholder ((void *) (intptr_t) (-1))
+
+// -1 when the node has no icon. Images are converted once (16x16 logical, at the DC's DPI
+// via uiprivWICToGDI) and cached by uiImage pointer; TVSIL_NORMAL is set on the first one.
+static int iconIndex(uiTree *t, void *node)
+{
+	uiImage *img;
+	IWICBitmap *wb;
+	HBITMAP hb = NULL;
+	HDC dc;
+	int idx;
+	int sz;
+
+	img = uiprivTreeModelIcon(t->model, node);
+	if (img == NULL)
+		return -1;
+	auto it = t->icons->find(img);
+	if (it != t->icons->end())
+		return it->second;
+	dc = GetDC(t->hwnd);
+	sz = GetSystemMetrics(SM_CXSMICON);
+	if (t->himl == NULL) {
+		t->himl = ImageList_Create(sz, sz, ILC_COLOR32 | ILC_MASK, 4, 4);
+		if (t->himl == NULL) {
+			ReleaseDC(t->hwnd, dc);
+			return -1;
+		}
+		TreeView_SetImageList(t->hwnd, t->himl, TVSIL_NORMAL);
+	}
+	wb = uiprivImageAppropriateForDC(img, dc);
+	if (uiprivWICToGDI(wb, dc, sz, sz, &hb) != S_OK || hb == NULL) {
+		ReleaseDC(t->hwnd, dc);
+		return -1;
+	}
+	idx = ImageList_Add(t->himl, hb, NULL);
+	DeleteObject(hb);
+	ReleaseDC(t->hwnd, dc);
+	(*(t->icons))[img] = idx;
+	return idx;
+}
 
 static HTREEITEM insertItem(uiTree *t, HTREEITEM parent, HTREEITEM after, void *node)
 {
@@ -94,6 +135,11 @@ static HTREEITEM insertItem(uiTree *t, HTREEITEM parent, HTREEITEM after, void *
 	tvi.item.pszText = wtext;
 	tvi.item.lParam = (LPARAM) node;
 	tvi.item.cChildren = uiprivTreeModelHasChildren(t->model, node) ? 1 : 0;
+	tvi.item.iImage = iconIndex(t, node);
+	if (tvi.item.iImage >= 0) {
+		tvi.item.mask |= TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+		tvi.item.iSelectedImage = tvi.item.iImage;
+	}
 	h = TreeView_InsertItem(t->hwnd, &tvi);
 	uiprivFree(wtext);
 	if (h == NULL) {
@@ -198,6 +244,9 @@ static void uiTreeDestroy(uiControl *c)
 	delete t->items;
 	delete t->nodes;
 	delete t->populated;
+	delete t->icons;
+	if (t->himl != NULL)
+		ImageList_Destroy(t->himl);
 	uiFreeControl(uiControl(t));
 }
 
@@ -341,6 +390,11 @@ static void treeNodeChanged(uiTree *t, void *node)
 	tvi.hItem = it->second;
 	tvi.pszText = wtext;
 	tvi.cChildren = uiprivTreeModelHasChildren(t->model, node) ? 1 : 0;
+	tvi.iImage = iconIndex(t, node);
+	if (tvi.iImage >= 0) {
+		tvi.mask |= TVIF_IMAGE | TVIF_SELECTEDIMAGE;
+		tvi.iSelectedImage = tvi.iImage;
+	}
 	TreeView_SetItem(t->hwnd, &tvi);
 	uiprivFree(wtext);
 }
@@ -355,6 +409,8 @@ uiTree *uiNewTree(uiTreeModel *m)
 	t->items = new std::map<void *, HTREEITEM>;
 	t->nodes = new std::map<HTREEITEM, void *>;
 	t->populated = new std::map<void *, bool>;
+	t->icons = new std::map<uiImage *, int>;
+	t->himl = NULL;
 	t->inSet = FALSE;
 	uiTreeOnSelectionChanged(t, defaultOnSelectionChanged, NULL);
 	uiTreeOnNodeActivated(t, defaultOnNodeActivated, NULL);

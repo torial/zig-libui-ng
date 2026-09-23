@@ -6,8 +6,8 @@ pub const Image = opaque {
     pub extern fn uiImageAppend(i: *ui.Image, pixels: ?*anyopaque, pixelWidth: c_int, pixelHeight: c_int, byteStride: c_int) void;
 
     pub const Append = uiImageAppend;
-    pub fn New() !*ui.Image {
-        return uiNewImage() orelse return error.InitImage;
+    pub fn New(width: f64, height: f64) !*ui.Image {
+        return uiNewImage(width, height) orelse return error.InitImage;
     }
     pub const Free = uiFreeImage;
 };
