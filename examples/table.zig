@@ -28,7 +28,7 @@ pub fn main() !void {
     const vbox = try ui.Box.New(.Vertical);
     main_window.SetChild(vbox.as_control());
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
     const string_allocator = gpa.allocator();
@@ -52,7 +52,7 @@ pub fn main() !void {
 
     // ----
     // Initialize the `extras.Table(TestStruct)` and pass it an ArrayList
-    var data = std.ArrayList(TestStruct){};
+    var data: std.ArrayList(TestStruct) = .empty;
     defer data.deinit(gpa.allocator());
 
     const hello = try string_allocator.dupeZ(u8, "Hello");

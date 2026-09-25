@@ -2,7 +2,7 @@ const std = @import("std");
 const ui = @import("ui");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
@@ -75,7 +75,7 @@ const CircleDrawer = struct {
     area: ?*ui.Area = null,
     actions: std.ArrayList(Action),
     action_current: usize = 0,
-    circles: std.AutoArrayHashMap(usize, Circle),
+    circles: std.AutoArrayHashMapUnmanaged(usize, Circle),
     radius_current: f64 = 10,
 
     const Error = ui.Error || error{ OutOfMemory, MissingCircle };
@@ -98,8 +98,8 @@ const CircleDrawer = struct {
         errdefer alloc.destroy(this);
         this.* = .{
             .alloc = alloc,
-            .actions = std.ArrayList(Action){},
-            .circles = std.AutoArrayHashMap(usize, Circle).init(alloc),
+            .actions = .empty,
+            .circles = .empty,
             .handler = ui.Area.Handler{
                 .Draw = @This().Draw,
                 .MouseEvent = @This().MouseEvent,
@@ -155,7 +155,7 @@ const CircleDrawer = struct {
         for (circle_drawer.actions.items[0..circle_drawer.action_current]) |action| {
             switch (action) {
                 .add_circle => |circle| {
-                    try circle_drawer.circles.put(circle.id, .{
+                    try circle_drawer.circles.put(circle_drawer.alloc, circle.id, .{
                         .x = circle.x,
                         .y = circle.y,
                         .radius = circle.radius,
@@ -176,7 +176,7 @@ const CircleDrawer = struct {
 
     pub fn Destroy(this: *@This()) void {
         this.actions.deinit(this.alloc);
-        this.circles.deinit();
+        this.circles.deinit(this.alloc);
         this.alloc.destroy(this);
     }
 

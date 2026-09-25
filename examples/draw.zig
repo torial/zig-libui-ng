@@ -107,7 +107,7 @@ pub fn on_closing(_: *ui.Window, _: ?*void) !ui.Window.ClosingAction {
 }
 
 pub fn main() !void {
-    var gpa_allocator = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa_allocator: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa_allocator.deinit();
     const gpa = gpa_allocator.allocator();
 

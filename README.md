@@ -7,7 +7,7 @@ type has been made an opaque with the extern functions embedded within in them.
 Additionally, functions using boolean values have been converted to use `bool`.
 Some helper functions have been made for writing event handlers.
 
-This library currently tracks the latest stable zig release `0.12.0`.  
+Builds with **Zig 0.16**.
 
 ## This fork (torial)
 
@@ -26,12 +26,56 @@ hand. Consumer: the Zebra language's `--gui-backend=libui_ng`
 (pinned by commit in its compiler; `tools/bump_libui_pin.sh` there after a push).
 Builds with zig 0.16.
 
+## Using it
+
+Add the dependency (from a directory with a `build.zig.zon`):
+
+```
+zig fetch --save git+https://github.com/torial/zig-libui-ng#<commit>
+```
+
+then import its modules in `build.zig`:
+
+```zig
+const lui = b.dependency("bindings_libui_ng", .{ .target = target, .optimize = optimize });
+exe.root_module.addImport("ui", lui.module("ui"));   // the libui-ng bindings
+// optional: lui.module("sci")        Scintilla editor control
+//           lui.module("ui-extras")  table helpers (see examples/table*.zig)
+```
+
+The C library is compiled from source as part of your build, so there is nothing to
+install on Windows or macOS. **Linux needs GTK 3 development headers** (Debian/Ubuntu:
+`sudo apt install libgtk-3-dev`; Fedora: `sudo dnf install gtk3-devel`).
+
+Zebra users do not need any of this: `zebra --gui-backend=libui_ng app.zbr` scaffolds
+the dependency for you.
+
+## Examples
+
+Twelve small programs live in `examples/`, most of them the 7GUIs tasks (counter,
+temperature converter, flight booker, timer, CRUD, circle drawer) plus tables, drawing,
+menus and a grid.
+
+```
+zig build examples          # compile all of them
+zig build run-counter       # build and run one: run-<file name without .zig>
+```
+
+They are a named step, not part of the default build, so a project that depends on this
+package does not build them. Every file in `examples/` must be listed in `build.zig`'s
+`examples` table -- anything unlisted is built by nothing, which is how half of them
+stopped compiling during the Zig 0.16 port without anyone noticing.
+
 ## Example
+
+This is `examples/hello.zig`, verbatim -- `zig build examples` compiles it, so it cannot
+drift from the API the way the previous README example did:
+
 ```zig
 const std = @import("std");
 const ui = @import("ui");
 
-pub fn on_closing(_: *ui.Window, _: ?*void) ui.Window.ClosingAction {
+pub fn on_closing(_: *ui.Window, _: ?*void) !ui.Window.ClosingAction {
     ui.Quit();
     return .should_close;
 }
@@ -49,10 +93,10 @@ pub fn main() !void {
 
     const main_window = try ui.Window.New("Hello, World!", 320, 240, .hide_menubar);
 
-    main_window.as_control().Show();
-    main_window.OnClosing(void, on_closing, null);
+    main_window.SetChild((try ui.Label.New("Hello, World!")).as_control());
 
-    main_window.MsgBox("Message Box", "Hello, World!");
+    main_window.as_control().Show();
+    main_window.OnClosing(void, ui.Error, on_closing, null);
 
     ui.Main();
 }

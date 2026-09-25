@@ -14,7 +14,7 @@ pub fn main() !void {
     };
     defer ui.Uninit();
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
     // Initialize components
@@ -38,7 +38,7 @@ pub fn main() !void {
         .data = App.Data.init(gpa.allocator()),
         .data_allocator = gpa.allocator(),
         .list = vbox_list,
-        .list_buttons = std.ArrayList(*ui.Button){},
+        .list_buttons = .empty,
         .arena_current = std.heap.ArenaAllocator.init(gpa.allocator()),
         .arena_old = std.heap.ArenaAllocator.init(gpa.allocator()),
         .entry_name = entry_name,

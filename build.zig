@@ -71,7 +71,61 @@ pub fn build(b: *std.Build) void {
     });
     sci_module.addImport("ui", ui_module);
     sci_module.linkLibrary(sci_lib);
+
+    // `ui-extras` (table helpers built on `ui`) and the examples were cut in eceb8117,
+    // "Zig 0.16 compat -- minimal build (no examples)". Nothing built them afterwards, so
+    // they rotted: six of twelve stopped compiling on 0.16, and `table`/`table-mvc`
+    // imported a module the package no longer exported -- unbuildable by anyone. Restored
+    // 2026-09-25.
+    //
+    // The examples hang off their OWN step and are NOT installed by default: consumers
+    // (Zebra's `--gui-backend=libui_ng` scaffold depends on this package) run the default
+    // step and must not pay for twelve demo executables.
+    //   zig build examples          compile every example
+    //   zig build run-<name>        build and run one (e.g. zig build run-counter)
+    const ui_extras_module = b.addModule("ui-extras", .{
+        .root_source_file = b.path("src/extras.zig"),
+        .imports = &.{.{ .name = "ui", .module = ui_module }},
+    });
+
+    const examples_step = b.step("examples", "Build every example in examples/");
+    inline for (examples) |ex| {
+        const mod = b.createModule(.{
+            .root_source_file = b.path("examples/" ++ ex.name ++ ".zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        mod.addImport("ui", ui_module);
+        if (ex.extras) mod.addImport("ui-extras", ui_extras_module);
+        const exe = b.addExecutable(.{
+            .name = ex.name,
+            .root_module = mod,
+            .win32_manifest = b.path("examples/example.static.manifest"),
+        });
+        exe.subsystem = .windows;
+        examples_step.dependOn(&exe.step);
+        const run = b.addRunArtifact(exe);
+        b.step("run-" ++ ex.name, "Build and run examples/" ++ ex.name ++ ".zig").dependOn(&run.step);
+    }
 }
+
+// Every file in examples/ must be listed here, or it is built by nothing -- which is how
+// half of them broke unnoticed. `extras` = the example imports `ui-extras`.
+const Example = struct { name: []const u8, extras: bool = false };
+const examples = [_]Example{
+    .{ .name = "hello" },
+    .{ .name = "counter" },
+    .{ .name = "timer" },
+    .{ .name = "grid" },
+    .{ .name = "menu" },
+    .{ .name = "draw" },
+    .{ .name = "temperature-converter" },
+    .{ .name = "flight-booker" },
+    .{ .name = "crud" },
+    .{ .name = "circle-drawer" },
+    .{ .name = "table", .extras = true },
+    .{ .name = "table-mvc", .extras = true },
+};
 
 const scintilla_common_sources = [_][]const u8{
     "scintilla/src/AutoComplete.cxx",

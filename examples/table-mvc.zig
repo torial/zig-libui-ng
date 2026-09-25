@@ -67,7 +67,7 @@ pub fn main() !void {
     vbox.SetPadded(true);
     main_window.SetMargined(true);
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa: std.heap.DebugAllocator(.{}) = .init;
     defer _ = gpa.deinit();
 
     const string_allocator = gpa.allocator();
@@ -147,8 +147,8 @@ const App = struct {
     fn init(allocator: std.mem.Allocator) App {
         return .{
             .allocator = allocator,
-            .model = std.ArrayList(ModelData){},
-            .view = std.ArrayList(ViewData){},
+            .model = .empty,
+            .view = .empty,
             .table = undefined,
         };
     }
