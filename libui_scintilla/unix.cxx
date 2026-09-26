@@ -34,10 +34,21 @@ struct uiScintilla {
 
 uiUnixControlAllDefaults(uiScintilla)
 
-static void onSciNotify(ScintillaObject *sci, gint id, SCNotification *n, gpointer data)
+// The parameter types are EXACTLY the marshaller's (GMarshalFunc_VOID__INT_BOXED in
+// scintilla-marshal.c: gpointer, gint, gpointer, gpointer), not the more descriptive
+// ScintillaObject* / SCNotification*. scintilla-marshal.c is compiled by zig with
+// UBSan's function-type check, which traps on a call through a pointer whose type differs
+// from the callee's -- and it did, on the first notification, killing every program with
+// an editor at startup on Linux in Debug and ReleaseSafe (found by zebra-ide's CI,
+// 2026-09-26). GTK's own marshallers live in the system library and are not checked,
+// which is why key-press-event's handler below can keep its typed signature.
+static void onSciNotify(gpointer sci, gint id, gpointer notification, gpointer data)
 {
 	uiScintilla *s = uiScintilla(data);
+	SCNotification *n = (SCNotification *) notification;
 
+	(void) sci;
+	(void) id;
 	if (s->onNotify != NULL)
 		(*(s->onNotify))(s, n, s->onNotifyData);
 }
