@@ -55,8 +55,8 @@ pub fn main() !void {
     var data: std.ArrayList(TestStruct) = .empty;
     defer data.deinit(gpa.allocator());
 
-    const hello = try string_allocator.dupeZ(u8, "Hello");
-    const world = try string_allocator.dupeZ(u8, "World");
+    const hello = try string_allocator.dupeSentinel(u8, "Hello", 0);
+    const world = try string_allocator.dupeSentinel(u8, "World", 0);
     try data.appendSlice(gpa.allocator(), &.{
         .{ .field_1 = 1, .field_2 = hello, .field_3 = .{ .data = 0 }, .field_4 = .{ .data = 0 } },
         .{ .field_1 = 2, .field_2 = world, .field_3 = .{ .data = 1 }, .field_4 = .{ .data = 50 } },

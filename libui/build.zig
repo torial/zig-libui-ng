@@ -43,7 +43,7 @@ pub fn build(b: *std.Build) void {
     } else if (target.result.os.tag == .windows) {
         // use windows/*.cpp backend
         lib.installHeader(b.path("ui_windows.h"), "ui_windows.h");
-        lib.subsystem = .Windows;
+        lib.subsystem = .windows;
         lib.root_module.addIncludePath(b.path("windows"));
         lib.root_module.linkSystemLibrary("user32", .{});
         lib.root_module.linkSystemLibrary("kernel32", .{});

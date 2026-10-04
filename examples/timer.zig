@@ -44,8 +44,8 @@ pub fn main() !void {
 pub fn say_time(app_opt: ?*App) ui.Error!ui.TimerAction {
     const app: *App = app_opt orelse return error.LibUINullUserdata;
     const time = std.Io.Clock.real.now(std.Io.Threaded.global_single_threaded.io()).toSeconds();
-    var buffer = [_]u8{0} ** 64;
-    const string = std.fmt.bufPrintZ(&buffer, "The current timestamp is: {}\n", .{time}) catch @panic("Error formatting text.");
+    var buffer: [64]u8 = @splat(0);
+    const string = std.fmt.bufPrintSentinel(&buffer, "The current timestamp is: {}\n", .{time}, 0) catch @panic("Error formatting text.");
     app.entry.Append(string.ptr);
     return .rearm;
 }

@@ -14,9 +14,9 @@ const OnClickError = std.mem.Allocator.Error || ui.Error || error{
 };
 pub fn on_click(_: *ui.Button, app_opt: ?*App) OnClickError!void {
     const app = app_opt orelse return error.LibUIPassedNullPointer;
-    const name = try app.allocator.dupeZ(u8, "");
-    const surname = try app.allocator.dupeZ(u8, "");
-    const button_text = try app.allocator.dupeZ(u8, "Delete");
+    const name = try app.allocator.dupeSentinel(u8, "", 0);
+    const surname = try app.allocator.dupeSentinel(u8, "", 0);
+    const button_text = try app.allocator.dupeSentinel(u8, "Delete", 0);
     try app.table.data.array_list.append(app.allocator, .{ .name = name, .surname = surname, .button_text = button_text });
     app.table.model.RowInserted(@intCast(app.table.data.array_list.items.len - 1));
 }
@@ -213,7 +213,7 @@ const ViewData = struct {
                 const modf = std.math.modf(edit.height);
                 const min_size = std.fmt.float.min_buffer_size;
                 var buf: [min_size]u8 = undefined;
-                const string = std.fmt.bufPrintZ(&buf, "{d}' {d}\"", .{ modf.ipart, @round(modf.fpart * 12) }) catch return null;
+                const string = std.fmt.bufPrintSentinel(&buf, "{d}' {d}\"", .{ modf.ipart, @round(modf.fpart * 12) }, 0) catch return null;
                 return ui.Table.Value.New(.{ .String = string }) catch null;
             },
             else => return null,

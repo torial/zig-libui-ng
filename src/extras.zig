@@ -32,11 +32,12 @@ pub const TableType = opaque {
 /// widget. See `ui.Table.Model` and `ui.Table.AppendColumn` for more details.
 pub fn Table(comptime T: type) type {
     const info = @typeInfo(T);
-    const struct_info = switch (info) {
-        .@"struct" => |s| s,
+    switch (info) {
+        .@"struct" => {},
         else => @compileError("Table requires a struct type to be passed"),
-    };
-    const num_columns = struct_info.fields.len;
+    }
+    const fields = fieldsOf(T);
+    const num_columns = fields.len;
     return struct {
         handler: ui.Table.Model.Handler = undefined,
         model: *ui.Table.Model = undefined,
@@ -89,7 +90,7 @@ pub fn Table(comptime T: type) type {
                     const allocator = self.allocator orelse return;
                     for (list.items) |data| {
                         inline for (0..num_columns) |column| {
-                            const field = struct_info.fields[column];
+                            const field = fields[column];
                             switch (field.type) {
                                 [:0]const u8 => {
                                     allocator.free(@field(data, field.name));
@@ -145,7 +146,7 @@ pub fn Table(comptime T: type) type {
                 .array_list => .Always,
             };
             inline for (0..num_columns) |column| {
-                const field = struct_info.fields[column];
+                const field = fields[column];
                 const name = std.fmt.comptimePrint("{s}", .{field.name});
                 switch (field.type) {
                     TableType.Checkbox => {
@@ -224,7 +225,7 @@ pub fn Table(comptime T: type) type {
 
             switch (column) {
                 inline 0...num_columns - 1 => |field_index| {
-                    const field = struct_info.fields[field_index];
+                    const field = fields[field_index];
                     return switch (field.type) {
                         TableType.Checkbox, TableType.Progress => .Int,
                         TableType.Color => .Color,
@@ -270,7 +271,7 @@ pub fn Table(comptime T: type) type {
             var value_param: ?ui.Table.Value.TypeParameters = null;
             switch (column) {
                 inline 0...num_columns - 1 => |field_index| {
-                    const field = struct_info.fields[field_index];
+                    const field = fields[field_index];
 
                     switch (field.type) {
                         TableType.Checkbox, TableType.Progress => {
@@ -292,7 +293,7 @@ pub fn Table(comptime T: type) type {
                             // TODO: allow user to configure float precision
                             // TODO: allow user to configure int base
                             const format_string = if (@typeInfo(t) == .float) "{d:.2}" else "{any}";
-                            const string = std.fmt.bufPrintZ(&buffer, format_string, .{value}) catch @panic("Formatting column " ++ field.name);
+                            const string = std.fmt.bufPrintSentinel(&buffer, format_string, .{value}, 0) catch @panic("Formatting column " ++ field.name);
                             value_param = .{ .String = string };
                         },
                     }
@@ -338,7 +339,7 @@ pub fn Table(comptime T: type) type {
 
             switch (column) {
                 inline 0...num_columns - 1 => |field_index| {
-                    const field = struct_info.fields[field_index];
+                    const field = fields[field_index];
                     const previous_value = @field(data, field.name);
                     switch (field.type) {
                         TableType.Checkbox, TableType.Progress => {
@@ -358,7 +359,7 @@ pub fn Table(comptime T: type) type {
                             const string = std.mem.span(value.String());
                             if (self.allocator) |alloc| {
                                 alloc.free(@field(data, field.name)); // Free previous value
-                                @field(data, field.name) = alloc.dupeZ(u8, string) catch @panic("setCellValue error running dupeZ on string");
+                                @field(data, field.name) = alloc.dupeSentinel(u8, string, 0) catch @panic("setCellValue error running dupeZ on string");
                             } else {
                                 std.log.info("No table allocator, could not store new value of string: {s}", .{string});
                             }
@@ -394,3 +395,23 @@ pub fn Table(comptime T: type) type {
 
 const ui = @import("ui");
 const std = @import("std");
+
+/// A struct's fields as `{ name, type }`, from either reflection layout: Zig 0.16 reports
+/// `fields[i].name/.type`, 0.17 reports struct-of-arrays `field_names` / `field_types`.
+const FieldView = struct { name: [:0]const u8, type: type };
+fn fieldsOf(comptime T: type) []const FieldView {
+    comptime {
+        const s = @typeInfo(T).@"struct";
+        if (@hasField(@TypeOf(s), "field_names")) {
+            var a: [s.field_names.len]FieldView = undefined;
+            for (s.field_names, s.field_types, 0..) |n, t, i| a[i] = .{ .name = n, .type = t };
+            const c = a;
+            return &c;
+        } else {
+            var a: [s.fields.len]FieldView = undefined;
+            for (s.fields, 0..) |f, i| a[i] = .{ .name = f.name, .type = f.type };
+            const c = a;
+            return &c;
+        }
+    }
+}

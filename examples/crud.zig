@@ -133,8 +133,8 @@ const App = struct {
         if (selected_id == 0) return;
         const datum = app.data.get(selected_id) orelse return;
         app.selected_id = selected_id;
-        const name = try app.arena_current.allocator().dupeZ(u8, datum.name);
-        const surname = try app.arena_current.allocator().dupeZ(u8, datum.surname);
+        const name = try app.arena_current.allocator().dupeSentinel(u8, datum.name, 0);
+        const surname = try app.arena_current.allocator().dupeSentinel(u8, datum.surname, 0);
         app.entry_name.SetText(name);
         app.entry_surname.SetText(surname);
     }

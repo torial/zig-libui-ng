@@ -51,7 +51,7 @@ pub fn on_clicked(_: *ui.Button, label_opt: ?*ui.Label) Error!void {
     counter += 1;
 
     var buf: [255]u8 = undefined;
-    const new_string = try std.fmt.bufPrintZ(&buf, "{}", .{counter});
+    const new_string = try std.fmt.bufPrintSentinel(&buf, "{}", .{counter}, 0);
 
     label.SetText(new_string);
 }
